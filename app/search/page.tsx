@@ -33,7 +33,7 @@ export default function Search() {
                     <span className="text-xl">💡</span>
                     <div>
                         <p className="text-sm font-semibold text-blue-900">Try natural language</p>
-                        <p className="text-xs text-blue-700">"I had two eggs and a piece of toast for breakfast"</p>
+                        <p className="text-xs text-blue-700">&quot;I had two eggs and a piece of toast for breakfast&quot;</p>
                     </div>
                 </div>
             </div>
