@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  password         String
+  name             String?
+  calorieBound     Int       @default(2000)
+  dietaryPreference String   @default("Omnivore") // Omnivore, Vegetarian, Vegan, Keto
+  onboardingComplete Boolean @default(false)
+  mealLogs         MealLog[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model MealLog {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String     // Breakfast, Lunch, Dinner, Snack
+  date        DateTime   @default(now())
+  items       FoodItem[]
+}
+
+model FoodItem {
+  id             String   @id @default(cuid())
+  mealLogId      String
+  mealLog        MealLog  @relation(fields: [mealLogId], references: [id], onDelete: Cascade)
+  name           String
+  calories       Int
+  protein        Float?
+  carbs          Float?
+  fat            Float?
+  servingSizeG   Float?
+}
