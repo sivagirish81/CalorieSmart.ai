@@ -6,28 +6,68 @@ This repository implements **Phase 1 and Phase 2** of the CalorieSmart AI Codex 
 
 ---
 
-## 🛠 Features Implemented (Post-Repo Pull)
+## � Getting Started
+
+Follow these steps to get the application running on your local machine:
+
+### 1. Prerequisites
+- **Node.js**: Ensure you have Node.js (v18 or later) installed.
+- **npm**: npm is included with Node.js.
+
+### 2. Installation
+Clone the repository and install dependencies:
+```bash
+git clone [repository-url]
+cd CalorieSmart.ai
+npm install
+```
+
+### 3. Environment Setup
+Copy the example environment file to create your own configuration:
+```bash
+cp .env.example .env
+```
+Open `.env` and fill in your details:
+- If using `NUTRITION_SOURCE="API"`, add your `CALORIE_NINJAS_API_KEY`.
+- Generate a secure `NEXTAUTH_SECRET` (e.g., using `openssl rand -base64 32`).
+
+### 4. Database Setup
+Initialize the local SQLite database and sync the Prisma schema:
+```bash
+npx prisma db push
+```
+
+### 5. Start the Application
+Run the development server:
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser to see the app.
+
+---
+
+## �🛠 Features Implemented 
 
 Since cloning this base Next.js repository, the following core MVP architectural mechanisms have been rigorously developed and deployed to satisfy the Phase 1 & Phase 2 constraints:
 
-### 1. NextAuth Credentials Authentication (Phase 2)
+### 1. NextAuth Credentials Authentication 
 The application is no longer a localized mock. We strictly enforce multi-user, encrypted sessions:
 - Implemented dedicated, animated `/login` and `/signup` gateway workflows.
 - User passwords are cryptographically hashed using `bcryptjs`.
 - HTTP-Only JWT tokens are managed natively by NextAuth (`auth.js`).
 
-### 2. Physical Database & Prisma Tooling (Phase 2)
+### 2. Physical Database & Prisma Tooling 
 We decoupled static JSON mocks out of the UI tree and built physical persistence:
 - Initialized a local file-based `SQLite` database (`dev.db`).
 - Configured **Prisma ORM**, providing absolute end-to-end TypeScript safety.
 - Created scalable, relational data models (`User`, `MealLog`, `FoodItem`).
 
-### 3. Strict Onboarding Pipeline (Phase 2)
+### 3. Strict Onboarding Pipeline 
 As requested by the master prompt, the database strictly tracks profile completion (`onboardingComplete = false` default constraint). 
 - If a user mathematically authenticates but has zero biological metadata, the Server Component inside `app/page.tsx` forcibly intercepts the rendering tree and redirects them to the dedicated `/onboarding` UI.
 - Here they must provide their Calorie Limit and Dietary Preference before the Dashboard unlocks.
 
-### 4. Hybrid AI Meal Analyzer (Phase 1 & Phase 3)
+### 4. Hybrid AI Meal Analyzer 
 - Implemented a Natural Language Processing strategy via Next.js **Server Actions**. This strictly prevents the external API keys from leaking to the browser client.
 - We support a `MOCK` provider constraint to achieve "sub-2-second" responses offline, but can seamlessly swap to instant live payloads using the `API` provider (CalorieNinjas).
 
@@ -35,19 +75,8 @@ As requested by the master prompt, the database strictly tracks profile completi
 
 ## 📖 How To Use These Features
 
-### 1. Boot up the Live Data Setup
-Ensure your `.env` file in the root of the project is correctly defined:
-```env
-# "API" engages CalorieNinjas. "MOCK" uses local offline test responses.
-NUTRITION_SOURCE="API" 
-CALORIE_NINJAS_API_KEY="your_api_key_here"
-
-# Standard SQLite and Auth bindings
-DATABASE_URL="file:./dev.db"
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="your_secure_random_string"
-```
-Run `npx prisma db push` to generate your local `dev.db` identical copy. Then execute `npm run dev`.
+### 1. Initial Setup
+Ensure you have followed the [Getting Started](#-getting-started) section to set up your environment variables and database. Once done, the application will be ready for exploration.
 
 ### 2. Using Authentication & Onboarding
 - **Sign Up**: Navigate to `http://localhost:3000/signup`. Enter an email/password. The database securely registers you.
