@@ -1,94 +1,91 @@
 # CalorieSmart AI 🥗
 
+[![CI Status](https://img.shields.io/github/actions/workflow/status/sivagirish81/CalorieSmart.ai/ci.yml?branch=main&label=CI&logo=github&style=flat-square&color=blue)](https://github.com/sivagirish81/CalorieSmart.ai/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?style=flat-square&logo=prisma)](https://www.prisma.io/)
+
 **Precision Nutrition, Powered by Intelligence.**
 
-This repository implements **Phase 1 and Phase 2** of the CalorieSmart AI Codex Build Prompt. It is a mobile-first, highly responsive web application designed for frictionless natural-language nutrition tracking.
+CalorieSmart AI is a mobile-first, high-performance web application designed for frictionless natural-language nutrition tracking. Built with focus on user experience and data privacy, it transforms casual food descriptions into precise nutritional data using AI.
 
 ---
 
-## � Getting Started
+## ✨ Features
+
+- **🔐 Secure Authentication**: Integrated NextAuth.js workflow with bcrypt-hashed password security and JWT session management.
+- **🧠 AI Meal Analyzer**: Natural Language Processing (NLP) bridge via Server Actions to parse food descriptions into macros (Protein, Fats, Carbs).
+- **📋 Intelligent Onboarding**: Profile-driven tracking that calculates personalized calorie limits and dietary requirements.
+- **📊 Real-time Dashboard**: Dynamic telemetry visualization of your daily calorie progress and macro distribution.
+- **� Reliable Persistence**: Powered by SQLite and Prisma ORM for end-to-end type safety and lightning-fast local data access.
+- **📱 Mobile-First Design**: Highly responsive UI built for modern devices with fluid animations and micro-interactions.
+
+---
+
+## 🛠 Tech Stack
+
+- **Framework**: [Next.js 15](https://nextjs.org/) (App Router)
+- **Database**: [SQLite](https://sqlite.org/) via [Prisma ORM](https://www.prisma.io/)
+- **Auth**: [NextAuth.js](https://next-auth.js.org/) (Auth.js)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **AI/NLP**: Natural Language nutrition parsing (CalorieNinjas API Integration)
+
+---
+
+## 🚀 Getting Started
 
 Follow these steps to get the application running on your local machine:
 
 ### 1. Prerequisites
-- **Node.js**: Ensure you have Node.js (v18 or later) installed.
-- **npm**: npm is included with Node.js.
+- **Node.js**: v18.0.0 or later
+- **npm**: v9.0.0 or later
 
 ### 2. Installation
 Clone the repository and install dependencies:
 ```bash
-git clone [repository-url]
+git clone https://github.com/sivagirish81/CalorieSmart.ai.git
 cd CalorieSmart.ai
 npm install
 ```
 
-### 3. Environment Setup
-Copy the example environment file to create your own configuration:
+### 3. Environment Configuration
+Copy the example environment file and fill in your details:
 ```bash
 cp .env.example .env
 ```
-Open `.env` and fill in your details:
-- If using `NUTRITION_SOURCE="API"`, add your `CALORIE_NINJAS_API_KEY`.
-- Generate a secure `NEXTAUTH_SECRET` (e.g., using `openssl rand -base64 32`).
+Key configuration values needed:
+- `NUTRITION_SOURCE`: Set to `"API"` for live results or `"MOCK"` for local testing.
+- `CALORIE_NINJAS_API_KEY`: Required if using `API` source.
+- `NEXTAUTH_SECRET`: A secure random string for session encryption.
 
 ### 4. Database Setup
-Initialize the local SQLite database and sync the Prisma schema:
+Initialize the local SQLite database and sync the schema:
 ```bash
 npx prisma db push
 ```
 
-### 5. Start the Application
-Run the development server:
+### 5. Running the Application
+Start the development server:
 ```bash
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) in your browser to see the app.
+Open [http://localhost:3000](http://localhost:3000) to begin tracking your nutrition.
 
 ---
 
-## �🛠 Features Implemented 
+## 📖 How To Use
 
-Since cloning this base Next.js repository, the following core MVP architectural mechanisms have been rigorously developed and deployed to satisfy the Phase 1 & Phase 2 constraints:
-
-### 1. NextAuth Credentials Authentication 
-The application is no longer a localized mock. We strictly enforce multi-user, encrypted sessions:
-- Implemented dedicated, animated `/login` and `/signup` gateway workflows.
-- User passwords are cryptographically hashed using `bcryptjs`.
-- HTTP-Only JWT tokens are managed natively by NextAuth (`auth.js`).
-
-### 2. Physical Database & Prisma Tooling 
-We decoupled static JSON mocks out of the UI tree and built physical persistence:
-- Initialized a local file-based `SQLite` database (`dev.db`).
-- Configured **Prisma ORM**, providing absolute end-to-end TypeScript safety.
-- Created scalable, relational data models (`User`, `MealLog`, `FoodItem`).
-
-### 3. Strict Onboarding Pipeline 
-As requested by the master prompt, the database strictly tracks profile completion (`onboardingComplete = false` default constraint). 
-- If a user mathematically authenticates but has zero biological metadata, the Server Component inside `app/page.tsx` forcibly intercepts the rendering tree and redirects them to the dedicated `/onboarding` UI.
-- Here they must provide their Calorie Limit and Dietary Preference before the Dashboard unlocks.
-
-### 4. Hybrid AI Meal Analyzer 
-- Implemented a Natural Language Processing strategy via Next.js **Server Actions**. This strictly prevents the external API keys from leaking to the browser client.
-- We support a `MOCK` provider constraint to achieve "sub-2-second" responses offline, but can seamlessly swap to instant live payloads using the `API` provider (CalorieNinjas).
+1. **Sign Up**: Create a secure account at `/signup`.
+2. **Onboard**: Complete your biological profile (Calorie Goal, Name, Diet) to unlock the dashboard.
+3. **Log Meals**: Use the **Log Meal (🔍)** action. Type naturally: *"a bowl of oatmeal with blueberries and a coffee"*.
+4. **Track Progress**: Your dashboard instantly reflects the total macros and calories added to your daily log.
 
 ---
 
-## 📖 How To Use These Features
+## 🛡 License
 
-### 1. Initial Setup
-Ensure you have followed the [Getting Started](#-getting-started) section to set up your environment variables and database. Once done, the application will be ready for exploration.
-
-### 2. Using Authentication & Onboarding
-- **Sign Up**: Navigate to `http://localhost:3000/signup`. Enter an email/password. The database securely registers you.
-- **Onboard**: Upon successful signup, the application strictly forces you to the `/onboarding` page. Input your biological profile (Calorie Goal, Name, Diet).
-- **Dashboard Synchronization**: Once submitted, the Server Action (`submitOnboarding`) flips your database flag to `true`, unlocking the root dashboard exclusively.
-
-### 3. AI Food Searching & Dashboard Telemetry
-- Click the **Log Meal (Magnifying Glass)** quick action on the dashboard.
-- Type *"a slice of pepperoni pizza and a salad"*.
-- The Server Actions immediately capture the query, dispatch it to the API, and calculate the exact macro level (Protein, Fats, Carbs).
-- Click **"Add to Daily Log"**. This transaction is securely tied strictly to your `User ID` and pushes the data to the SQLite `FoodItem` table. 
-- Return home: Your Dashboard physically aggregates your entries and draws a dynamic progress bar tracking your calorie proximity.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 © 2026 CalorieSmart AI.
