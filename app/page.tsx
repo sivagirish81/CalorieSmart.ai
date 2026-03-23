@@ -1,27 +1,95 @@
 import Link from "next/link";
+import { prisma } from "@/lib/db";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 
-export default function Dashboard() {
-  const consumed = 1450;
-  const limit = 2000;
-  const remaining = limit - consumed;
-  const percentage = (consumed / limit) * 100;
+// Ensure this page always fetches fresh data on load
+export const dynamic = "force-dynamic";
+
+export default async function Dashboard() {
+  const session = await auth();
+  if (!session?.user?.email) redirect("/login");
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email }
+  });
+  if (!user) redirect("/login");
+
+  // STRICT PHASE 2 REQUIREMENT: Mandatory Onboarding Pipeline
+  if (!user.onboardingComplete) redirect("/onboarding");
+
+  // Calculate today's boundaries
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  
+  const endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+
+  // Fetch today's meal logs
+  const todaysMeals = await prisma.mealLog.findMany({
+    where: {
+      userId: user.id,
+      date: {
+        gte: startOfDay,
+        lte: endOfDay,
+      }
+    },
+    include: {
+      // Include the actual food items to get their calories
+      items: true 
+    },
+    orderBy: {
+      date: 'desc'
+    }
+  });
+
+  // Calculate consumed calories & prepare recent meals list
+  let consumed = 0;
+  const formattedMeals: Array<{ name: string; time: string; kcal: number; type: string }> = [];
+
+  for (const log of todaysMeals) {
+    let logTotal = 0;
+    for (const item of log.items) {
+      logTotal += item.calories;
+      
+      // Push each item into our recent meals display
+      formattedMeals.push({
+        name: item.name,
+        time: log.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        kcal: item.calories,
+        type: log.type
+      });
+    }
+    consumed += logTotal;
+  }
+
+  const limit = user.calorieBound;
+  const remaining = Math.max(0, limit - consumed);
+  const percentage = Math.min(100, (consumed / limit) * 100);
 
   const getProgressBarColor = () => {
     if (percentage < 70) return "bg-green-500";
-    if (percentage < 90) return "bg-yellow-500";
+    if (percentage < 95) return "bg-yellow-500";
     return "bg-red-500";
   };
+
+  const todayStr = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <header className="flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Today</h1>
-          <p className="text-gray-500">March 1, 2026</p>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Hello, {user.name?.split(' ')[0] || 'Today'}</h1>
+          <p className="text-gray-500">{todayStr}</p>
         </div>
-        <div className="text-right">
-          <span className="text-4xl font-black text-blue-600">{remaining}</span>
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">kcal left</p>
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+            <span className="text-4xl font-black text-blue-600">{Math.round(remaining)}</span>
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">kcal left</p>
+          </div>
+          <Link href="/profile" className="p-3 bg-gray-50 rounded-full hover:bg-gray-100 transition-colors border border-gray-100">
+             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </Link>
         </div>
       </header>
 
@@ -55,7 +123,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 gap-4">
           <Link
             href="/search"
-            className="flex flex-col items-center justify-center p-6 bg-blue-600 text-white rounded-3xl transition-transform hover:scale-[0.98] active:scale-95"
+            className="flex flex-col items-center justify-center p-6 bg-blue-600 text-white rounded-3xl transition-transform hover:scale-[0.98] active:scale-95 shadow-md"
           >
             <span className="text-2xl mb-1">🔍</span>
             <span className="text-sm font-semibold">Log Meal</span>
@@ -69,32 +137,36 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Recent Meals (Mock) */}
+      {/* Recent Meals (Dynamic) */}
       <div className="space-y-4 pt-4">
         <div className="flex justify-between items-center">
           <h2 className="text-lg font-bold text-gray-900">Today&apos;s Meals</h2>
           <button className="text-blue-600 text-sm font-semibold">See All</button>
         </div>
-        <div className="space-y-3">
-          {[
-            { name: "Avocado Toast", time: "8:30 AM", kcal: 450, type: "Breakfast" },
-            { name: "Chicken Quinoa Bowl", time: "1:00 PM", kcal: 650, type: "Lunch" },
-            { name: "Greek Yogurt", time: "4:15 PM", kcal: 350, type: "Snack" },
-          ].map((meal, i) => (
-            <div key={i} className="flex justify-between items-center p-4 bg-white rounded-2xl border border-gray-100">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-xl">
-                  {meal.type === "Breakfast" ? "🍳" : meal.type === "Lunch" ? "🥗" : "🍎"}
+        
+        {formattedMeals.length === 0 ? (
+           <div className="p-8 text-center bg-gray-50 rounded-3xl border border-gray-100 border-dashed">
+             <p className="text-gray-500 text-sm font-medium">No meals logged yet today.</p>
+           </div>
+        ) : (
+          <div className="space-y-3">
+            {formattedMeals.map((meal, i) => (
+              <div key={i} className="flex justify-between items-center p-4 bg-white rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-xl">
+                    {/* Simplified icon logic */}
+                    {meal.type === "Meal" ? "🥗" : "🍎"}
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm text-gray-800 capitalize">{meal.name}</p>
+                    <p className="text-xs text-gray-400">{meal.time}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-bold text-sm text-gray-800">{meal.name}</p>
-                  <p className="text-xs text-gray-400">{meal.time}</p>
-                </div>
+                <p className="font-bold text-sm text-gray-700">+{meal.kcal} kcal</p>
               </div>
-              <p className="font-bold text-sm text-gray-700">+{meal.kcal} kcal</p>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

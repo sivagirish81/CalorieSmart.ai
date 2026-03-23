@@ -2,77 +2,64 @@
 
 **Precision Nutrition, Powered by Intelligence.**
 
-CalorieSmart AI is a mobile-first nutrition companion designed to make health tracking effortless. By leveraging natural language processing and a clean, intuitive interface, we help you stay on top of your goals without the friction of traditional calorie counters.
+This repository implements **Phase 1 and Phase 2** of the CalorieSmart AI Codex Build Prompt. It is a mobile-first, highly responsive web application designed for frictionless natural-language nutrition tracking.
 
 ---
 
-## ✨ Current Features
+## 🛠 Features Implemented (Post-Repo Pull)
 
-### 📊 Intelligent Dashboard
-- **Visual Progress**: Real-time caloric breakdown with dynamic progress indicators.
-- **Daily Summaries**: At-a-glance view of consumed vs. remaining calories.
-- **Meal Logs**: Keep track of your breakfast, lunch, and snacks in a clean, itemized list.
+Since cloning this base Next.js repository, the following core MVP architectural mechanisms have been rigorously developed and deployed to satisfy the Phase 1 & Phase 2 constraints:
 
-### 📱 Mobile-First Experience
-- **Optimized for Speed**: Built on Next.js for sub-2-second interactions.
-- **Clean UI**: A minimal, premium aesthetic that feels like a native app.
+### 1. NextAuth Credentials Authentication (Phase 2)
+The application is no longer a localized mock. We strictly enforce multi-user, encrypted sessions:
+- Implemented dedicated, animated `/login` and `/signup` gateway workflows.
+- User passwords are cryptographically hashed using `bcryptjs`.
+- HTTP-Only JWT tokens are managed natively by NextAuth (`auth.js`).
 
----
+### 2. Physical Database & Prisma Tooling (Phase 2)
+We decoupled static JSON mocks out of the UI tree and built physical persistence:
+- Initialized a local file-based `SQLite` database (`dev.db`).
+- Configured **Prisma ORM**, providing absolute end-to-end TypeScript safety.
+- Created scalable, relational data models (`User`, `MealLog`, `FoodItem`).
 
-## 🚀 Coming Soon
+### 3. Strict Onboarding Pipeline (Phase 2)
+As requested by the master prompt, the database strictly tracks profile completion (`onboardingComplete = false` default constraint). 
+- If a user mathematically authenticates but has zero biological metadata, the Server Component inside `app/page.tsx` forcibly intercepts the rendering tree and redirects them to the dedicated `/onboarding` UI.
+- Here they must provide their Calorie Limit and Dietary Preference before the Dashboard unlocks.
 
-We are actively building the following features to enhance your nutrition journey:
-
-- **AI Natural Language Search**: Describe your meal (e.g., "a slice of pizza and a salad") and let our AI handle the breakdown.
-- **Smart Suggestions**: Personalized "What should I eat?" recommendations based on your dietary preferences and remaining caloric budget.
-- **Dietary Profiles**: Tailored tracking for Vegan, Keto, Vegetarian, and Omnivore lifestyles.
-- **Historical Insights**: 7-day trends and nutrition analysis to visualize your progress over time.
-- **Secure Authentication**: Personalized accounts to sync your data across devices.
-
----
-
-## 🛠 Tech Stack
-
-- **Framework**: Next.js 15 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **Data Modeling**: Prisma ORM (SQLite)
+### 4. Hybrid AI Meal Analyzer (Phase 1 & Phase 3)
+- Implemented a Natural Language Processing strategy via Next.js **Server Actions**. This strictly prevents the external API keys from leaking to the browser client.
+- We support a `MOCK` provider constraint to achieve "sub-2-second" responses offline, but can seamlessly swap to instant live payloads using the `API` provider (CalorieNinjas).
 
 ---
 
-## 📦 Getting Started
+## 📖 How To Use These Features
 
-### Prerequisites
-- Node.js 18.x or later
-- npm or yarn
+### 1. Boot up the Live Data Setup
+Ensure your `.env` file in the root of the project is correctly defined:
+```env
+# "API" engages CalorieNinjas. "MOCK" uses local offline test responses.
+NUTRITION_SOURCE="API" 
+CALORIE_NINJAS_API_KEY="your_api_key_here"
 
-### Installation
+# Standard SQLite and Auth bindings
+DATABASE_URL="file:./dev.db"
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="your_secure_random_string"
+```
+Run `npx prisma db push` to generate your local `dev.db` identical copy. Then execute `npm run dev`.
 
-1. **Clone the repository**
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-3. **Environment Setup**:
-   Create a `.env` file in the root:
-   ```env
-   DATABASE_URL="file:./dev.db"
-   ```
-4. **Run Development Server**:
-   ```bash
-   npm run dev
-   ```
+### 2. Using Authentication & Onboarding
+- **Sign Up**: Navigate to `http://localhost:3000/signup`. Enter an email/password. The database securely registers you.
+- **Onboard**: Upon successful signup, the application strictly forces you to the `/onboarding` page. Input your biological profile (Calorie Goal, Name, Diet).
+- **Dashboard Synchronization**: Once submitted, the Server Action (`submitOnboarding`) flips your database flag to `true`, unlocking the root dashboard exclusively.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
----
-
-## 🎬 Demo Walkthrough
-
-Currently, the application is in its **initial preview phase**:
-1. **Home**: View the interactive dashboard with placeholder nutrition data.
-2. **Navigation**: Use the bottom navigation bar to switch between the Dashboard and Search interfaces.
-3. **Search Preview**: Explore the upcoming meal logging interface designed for natural language input.
+### 3. AI Food Searching & Dashboard Telemetry
+- Click the **Log Meal (Magnifying Glass)** quick action on the dashboard.
+- Type *"a slice of pepperoni pizza and a salad"*.
+- The Server Actions immediately capture the query, dispatch it to the API, and calculate the exact macro level (Protein, Fats, Carbs).
+- Click **"Add to Daily Log"**. This transaction is securely tied strictly to your `User ID` and pushes the data to the SQLite `FoodItem` table. 
+- Return home: Your Dashboard physically aggregates your entries and draws a dynamic progress bar tracking your calorie proximity.
 
 ---
-© 2026 CalorieSmart AI. All rights reserved.
+© 2026 CalorieSmart AI.
