@@ -47,8 +47,8 @@ export default async function HistoryPage() {
     groupedLogs[dateStr] = { totalKcal: 0, logs: [] };
   }
 
-  type HistoryItem = { id: string; name: string; calories: number; servingSizeG?: number | null };
-  type HistoryLog = { id: string; date: Date; type: string; items: HistoryItem[] };
+  type HistoryLog = typeof mealLogs[0];
+  type HistoryItem = HistoryLog["items"][0];
 
   mealLogs.forEach((log: HistoryLog) => {
     const dateStr = log.date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", weekday: "long" });
