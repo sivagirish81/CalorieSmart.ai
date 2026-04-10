@@ -65,7 +65,7 @@ export async function analyzeMeal(query: string): Promise<AnalyzeMealResponse> {
   }
 }
 
-export async function saveMealLog(items: ParsedFoodItem[], type: string): Promise<{ success: boolean; error?: string }> {
+export async function saveMealLog(items: ParsedFoodItem[], type: string, overrideDate?: string): Promise<{ success: boolean; error?: string }> {
   try {
     if (!items || items.length === 0) {
       return { success: false, error: "No items to save." };
@@ -82,6 +82,11 @@ export async function saveMealLog(items: ParsedFoodItem[], type: string): Promis
       data: {
         userId: user.id,
         type: type,
+        date: overrideDate ? (() => {
+            const now = new Date();
+            const timeString = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+            return new Date(`${overrideDate}T${timeString}`);
+        })() : new Date(),
         items: {
           create: items.map(item => ({
             name: item.name,

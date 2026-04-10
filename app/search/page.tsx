@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { analyzeMeal, saveMealLog } from "./actions";
 import { ParsedFoodItem } from "@/lib/nutrition/types";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 interface SearchResult {
     success: boolean;
@@ -13,7 +14,8 @@ interface SearchResult {
     source?: string;
 }
 
-export default function SearchPage() {
+export function SearchContent() {
+    const searchParams = useSearchParams();
     const [query, setQuery] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -22,6 +24,20 @@ export default function SearchPage() {
     
     // Phase 4 Requirement: Meal Type Selector
     const [mealType, setMealType] = useState("Lunch");
+    const [overrideDate, setOverrideDate] = useState("");
+
+    useEffect(() => {
+        const d = searchParams.get("date");
+        if (d) {
+            const parsed = new Date(d);
+            if (!isNaN(parsed.getTime())) {
+                const year = parsed.getFullYear();
+                const month = String(parsed.getMonth() + 1).padStart(2, '0');
+                const day = String(parsed.getDate()).padStart(2, '0');
+                setOverrideDate(`${year}-${month}-${day}`);
+            }
+        }
+    }, [searchParams]);
 
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -43,7 +59,8 @@ export default function SearchPage() {
         if (!result?.data) return;
         setIsSaving(true);
         try {
-            const res = await saveMealLog(result.data, mealType);
+            const finalDate = overrideDate ? overrideDate : undefined;
+            const res = await saveMealLog(result.data, mealType, finalDate);
             if (res.success) {
                 setSaved(true);
             } else {
@@ -148,18 +165,29 @@ export default function SearchPage() {
 
                         <div className="mt-8 pt-6 border-t border-gray-100">
                             {/* Phase 4 Requirement: Meal Type Selector */}
-                            <div className="space-y-2 mb-6">
-                                <label className="text-sm font-bold text-gray-700 ml-1">Select Meal Type</label>
-                                <select 
-                                    value={mealType} 
-                                    onChange={(e) => setMealType(e.target.value)}
-                                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 appearance-none font-medium cursor-pointer shadow-inner"
-                                >
-                                    <option value="Breakfast">Breakfast</option>
-                                    <option value="Lunch">Lunch</option>
-                                    <option value="Dinner">Dinner</option>
-                                    <option value="Snack">Snack</option>
-                                </select>
+                            <div className="grid grid-cols-2 gap-4 mb-6">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-gray-700 ml-1">Meal Type</label>
+                                    <select 
+                                        value={mealType} 
+                                        onChange={(e) => setMealType(e.target.value)}
+                                        className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 appearance-none font-medium cursor-pointer shadow-inner"
+                                    >
+                                        <option value="Breakfast">Breakfast</option>
+                                        <option value="Lunch">Lunch</option>
+                                        <option value="Dinner">Dinner</option>
+                                        <option value="Snack">Snack</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-gray-700 ml-1">Date</label>
+                                    <input 
+                                        type="date"
+                                        value={overrideDate}
+                                        onChange={e => setOverrideDate(e.target.value)}
+                                        className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 font-medium cursor-pointer shadow-inner"
+                                    />
+                                </div>
                             </div>
 
                             <button 
@@ -197,5 +225,13 @@ export default function SearchPage() {
                 )}
             </div>
         </main>
+    );
+}
+
+export default function SearchPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center p-8"><p className="text-gray-500 font-bold">Loading NLP System...</p></div>}>
+            <SearchContent />
+        </Suspense>
     );
 }

@@ -10,10 +10,13 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",
+    "@types/canvas-confetti": "^1.9.0",
     "bcryptjs": "^3.0.3",
+    "canvas-confetti": "^1.9.4",
     "next": "16.1.6",
     "next-auth": "^5.0.0-beta.30",
     "react": "19.2.3",
+    "react-confetti": "^6.4.0",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
