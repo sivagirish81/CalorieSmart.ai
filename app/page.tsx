@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-
+import StreakBanner from "@/components/StreakBanner";
 // Ensure this page always fetches fresh data on load
 export const dynamic = "force-dynamic";
 
@@ -43,6 +43,35 @@ export default async function Dashboard() {
     }
   });
 
+  // Calculate 3-day Streak target meeting
+  const fourDaysAgo = new Date();
+  fourDaysAgo.setDate(fourDaysAgo.getDate() - 3);
+  fourDaysAgo.setHours(0, 0, 0, 0);
+
+  const streakMeals = await prisma.mealLog.findMany({
+    where: { userId: user.id, date: { gte: fourDaysAgo } },
+    include: { items: true }
+  });
+
+  const dailyTotals: Record<string, number> = {};
+  streakMeals.forEach((log: any) => {
+      const dateStr = log.date.toLocaleDateString("en-US");
+      if (!dailyTotals[dateStr]) dailyTotals[dateStr] = 0;
+      log.items.forEach((item: any) => { dailyTotals[dateStr] += item.calories; });
+  });
+
+  const checkStreak = (startIndex: number) => {
+      for (let i = startIndex; i < startIndex + 3; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toLocaleDateString("en-US");
+        const total = dailyTotals[dateStr] || 0;
+        if (total < user.calorieBound || total > user.calorieBound + 300) return false;
+      }
+      return true;
+  };
+  const streakAchieved = checkStreak(0) || checkStreak(1);
+
   // Calculate consumed calories & prepare recent meals list
   let consumed = 0;
   const formattedMeals: Array<{ name: string; time: string; kcal: number; type: string }> = [];
@@ -77,6 +106,7 @@ export default async function Dashboard() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
+      <StreakBanner achieved={streakAchieved} />
       <header className="flex justify-between items-end">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-gray-900">Hello, {user.name?.split(' ')[0] || 'Today'}</h1>
@@ -120,20 +150,28 @@ export default async function Dashboard() {
       {/* Quick Actions */}
       <div className="space-y-4">
         <h2 className="text-lg font-bold text-gray-900">Quick Actions</h2>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-3">
           <Link
             href="/search"
-            className="flex flex-col items-center justify-center p-6 bg-blue-600 text-white rounded-3xl transition-transform hover:scale-[0.98] active:scale-95 shadow-md"
+            className="flex flex-col items-center justify-center p-4 bg-blue-600 text-white rounded-3xl transition-transform hover:scale-[0.98] active:scale-95 shadow-md text-center"
           >
             <span className="text-2xl mb-1">🔍</span>
-            <span className="text-sm font-semibold">Log Meal</span>
+            <span className="text-xs font-semibold">Log NLP</span>
           </Link>
-          <button
-            className="flex flex-col items-center justify-center p-6 bg-white border border-gray-200 rounded-3xl transition-transform hover:scale-[0.98] active:scale-95"
+          <Link
+            href="/custom-food"
+            className="flex flex-col items-center justify-center p-4 bg-purple-600 text-white rounded-3xl transition-transform hover:scale-[0.98] active:scale-95 shadow-md text-center"
+          >
+            <span className="text-2xl mb-1">📝</span>
+            <span className="text-xs font-semibold">Custom</span>
+          </Link>
+          <Link
+            href="/suggestions"
+            className="flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-3xl transition-transform hover:scale-[0.98] active:scale-95 text-center shadow-sm"
           >
             <span className="text-2xl mb-1 text-gray-900">🤖</span>
-            <span className="text-sm font-semibold text-gray-700">Get Suggestion</span>
-          </button>
+            <span className="text-xs font-semibold text-gray-700">Suggest</span>
+          </Link>
         </div>
       </div>
 
@@ -141,7 +179,7 @@ export default async function Dashboard() {
       <div className="space-y-4 pt-4">
         <div className="flex justify-between items-center">
           <h2 className="text-lg font-bold text-gray-900">Today&apos;s Meals</h2>
-          <button className="text-blue-600 text-sm font-semibold">See All</button>
+          <Link href="/history" className="text-blue-600 text-sm font-semibold hover:underline">See All</Link>
         </div>
         
         {formattedMeals.length === 0 ? (

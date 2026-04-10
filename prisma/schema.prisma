@@ -16,6 +16,7 @@ model User {
   dietaryPreference String   @default("Omnivore") // Omnivore, Vegetarian, Vegan, Keto
   onboardingComplete Boolean @default(false)
   mealLogs         MealLog[]
+  customFoods      CustomFood[]
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 }
@@ -39,4 +40,17 @@ model FoodItem {
   carbs          Float?
   fat            Float?
   servingSizeG   Float?
+}
+
+model CustomFood {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  calories       Int
+  protein        Float?
+  carbs          Float?
+  fat            Float?
+  servingSizeG   Float?
+  createdAt      DateTime @default(now())
 }
