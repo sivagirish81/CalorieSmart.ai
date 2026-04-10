@@ -47,14 +47,17 @@ export default async function HistoryPage() {
     groupedLogs[dateStr] = { totalKcal: 0, logs: [] };
   }
 
-  mealLogs.forEach((log: any) => {
+  type HistoryItem = { id: string; name: string; calories: number; servingSizeG?: number | null };
+  type HistoryLog = { id: string; date: Date; type: string; items: HistoryItem[] };
+
+  mealLogs.forEach((log: HistoryLog) => {
     const dateStr = log.date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", weekday: "long" });
     if (groupedLogs[dateStr]) {
       groupedLogs[dateStr].logs.push(log);
       
       // add up the kcal
       let logTotal = 0;
-      log.items.forEach((item: any) => { logTotal += item.calories; });
+      log.items.forEach((item: HistoryItem) => { logTotal += item.calories; });
       groupedLogs[dateStr].totalKcal += logTotal;
     }
   });
@@ -93,14 +96,14 @@ export default async function HistoryPage() {
                     </Link>
                   </div>
                 ) : (
-                  logs.map((log: any) => (
+                  logs.map((log: HistoryLog) => (
                     <div key={log.id} className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
                       <div className="flex justify-between items-center mb-3">
                         <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2.5 py-1.5 rounded-lg">{log.type}</span>
                         <span className="text-xs text-gray-400 font-medium bg-gray-50 px-2 py-1 rounded-md">{log.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
                       <div className="space-y-3 mt-4">
-                        {log.items.map((item: any) => (
+                        {log.items.map((item: HistoryItem) => (
                           <div key={item.id} className="flex justify-between items-center bg-gray-50 p-4 rounded-2xl border border-gray-100 transition-colors hover:bg-gray-100/50">
                               <div className="flex flex-col pr-4">
                                   <span className="font-bold text-sm text-gray-900 capitalize leading-tight">{item.name}</span>

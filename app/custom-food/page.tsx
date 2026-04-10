@@ -5,7 +5,7 @@ import Link from "next/link";
 import { addCustomFood, getMyCustomFoods, logCustomFood } from "./actions";
 
 export default function CustomFoodPage() {
-    const [foods, setFoods] = useState<any[]>([]);
+    const [foods, setFoods] = useState<Array<{ id: string, name: string, calories: number }>>([]);
     const [loading, setLoading] = useState(true);
     
     const [name, setName] = useState("");
@@ -27,7 +27,7 @@ export default function CustomFoodPage() {
         setLoading(false);
     };
 
-    const handleAdd = async (e: any) => {
+    const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name || !calories) return;
         setIsSaving(true);
@@ -43,7 +43,7 @@ export default function CustomFoodPage() {
             setName("");
             setCalories(""); setProtein(""); setCarbs(""); setFat(""); setServing("");
             await loadData();
-        } catch (e) {
+        } catch {
             alert("Error adding food");
         } finally {
             setIsSaving(false);
@@ -55,7 +55,7 @@ export default function CustomFoodPage() {
         try {
             await logCustomFood(id, "Lunch");
             alert("Logged to Lunch successfully!");
-        } catch (e) {
+        } catch {
             alert("Error logging food");
         }
     };

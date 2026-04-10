@@ -21,8 +21,8 @@ export async function generateSuggestions() {
     });
 
     let consumed = 0;
-    todaysMeals.forEach((log: any) => {
-        log.items.forEach((item: any) => {
+    todaysMeals.forEach((log: { items: Array<{ calories: number }> }) => {
+        log.items.forEach((item: { calories: number }) => {
             consumed += item.calories;
         });
     });
@@ -45,7 +45,7 @@ export async function generateSuggestions() {
        "Keto": `You have ${remaining} calories remaining. Salmon with asparagus, or a cobb salad with eggs and bacon, keeps carbs low while staying under ${remaining} kcal.`
     };
 
-    let suggestionText = (prompts as any)[user.dietaryPreference] || `You have ${remaining} calories remaining!`;
+    const suggestionText = (prompts as Record<string, string>)[user.dietaryPreference] || `You have ${remaining} calories remaining!`;
 
     const customFoods = await prisma.customFood.findMany({
         where: { userId: user.id, calories: { lte: remaining } },

@@ -4,15 +4,17 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { generateSuggestions } from "./actions";
 
+type SuggestionData = Awaited<ReturnType<typeof generateSuggestions>>;
+
 export default function SuggestionsPage() {
-    const [data, setData] = useState<any>(null);
+    const [data, setData] = useState<SuggestionData | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         generateSuggestions().then(res => {
             setData(res);
             setLoading(false);
-        }).catch(e => {
+        }).catch(() => {
             alert("Error loading suggestions");
             setLoading(false);
         });
@@ -48,7 +50,7 @@ export default function SuggestionsPage() {
                             <div className="space-y-4">
                                 <h2 className="font-bold text-lg text-gray-900 ml-1">Fits your macros right now</h2>
                                 <div className="space-y-3">
-                                    {data.customFoods.map((food: any) => (
+                                    {(data.customFoods as Array<{id: string, name: string, calories: number}>).map((food) => (
                                         <div key={food.id} className="flex justify-between items-center p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
                                             <div>
                                                 <p className="font-bold text-gray-900">{food.name}</p>

@@ -35,7 +35,6 @@ export default function StreakBanner({ achieved }: { achieved: boolean }) {
 
     useEffect(() => {
         if (achieved) {
-            setShowBanner(true);
             const todayStr = new Date().toISOString().split("T")[0];
             const lastFired = localStorage.getItem("lastConfettiFired");
             
@@ -44,12 +43,10 @@ export default function StreakBanner({ achieved }: { achieved: boolean }) {
                 triggerConfetti();
                 localStorage.setItem("lastConfettiFired", todayStr);
             }
-        } else {
-            setShowBanner(false);
         }
     }, [achieved]);
 
-    if (!showBanner) return null;
+    if (!achieved) return null;
 
     return (
         <div className="bg-amber-100 border border-amber-200 text-amber-900 px-5 py-4 rounded-3xl flex justify-between items-center shadow-sm">

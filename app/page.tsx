@@ -54,10 +54,10 @@ export default async function Dashboard() {
   });
 
   const dailyTotals: Record<string, number> = {};
-  streakMeals.forEach((log: any) => {
+  streakMeals.forEach((log: { date: Date; items: Array<{ calories: number }> }) => {
       const dateStr = log.date.toLocaleDateString("en-US");
       if (!dailyTotals[dateStr]) dailyTotals[dateStr] = 0;
-      log.items.forEach((item: any) => { dailyTotals[dateStr] += item.calories; });
+      log.items.forEach((item: { calories: number }) => { dailyTotals[dateStr] += item.calories; });
   });
 
   const checkStreak = (startIndex: number) => {
