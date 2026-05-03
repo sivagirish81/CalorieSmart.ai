@@ -25,6 +25,26 @@ export function SearchContent() {
     // Phase 4 Requirement: Meal Type Selector
     const [mealType, setMealType] = useState("Lunch");
     const [overrideDate, setOverrideDate] = useState("");
+    const [overrideTime, setOverrideTime] = useState("");
+
+    useEffect(() => {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const mins = String(now.getMinutes()).padStart(2, '0');
+        setOverrideTime(`${hours}:${mins}`);
+    }, []);
+
+    const handleMealTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const val = e.target.value;
+        setMealType(val);
+        if (val === "Breakfast") setOverrideTime("08:00");
+        else if (val === "Lunch") setOverrideTime("13:00");
+        else if (val === "Dinner") setOverrideTime("19:00");
+        else if (val === "Snack") {
+            const now = new Date();
+            setOverrideTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+        }
+    };
 
     useEffect(() => {
         const d = searchParams.get("date");
@@ -60,7 +80,8 @@ export function SearchContent() {
         setIsSaving(true);
         try {
             const finalDate = overrideDate ? overrideDate : undefined;
-            const res = await saveMealLog(result.data, mealType, finalDate);
+            const finalTime = overrideTime ? overrideTime : undefined;
+            const res = await saveMealLog(result.data, mealType, finalDate, finalTime);
             if (res.success) {
                 setSaved(true);
             } else {
@@ -166,11 +187,11 @@ export function SearchContent() {
                         <div className="mt-8 pt-6 border-t border-gray-100">
                             {/* Phase 4 Requirement: Meal Type Selector */}
                             <div className="grid grid-cols-2 gap-4 mb-6">
-                                <div className="space-y-2">
+                                <div className="space-y-2 col-span-2">
                                     <label className="text-sm font-bold text-gray-700 ml-1">Meal Type</label>
                                     <select 
                                         value={mealType} 
-                                        onChange={(e) => setMealType(e.target.value)}
+                                        onChange={handleMealTypeChange}
                                         className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 appearance-none font-medium cursor-pointer shadow-inner"
                                     >
                                         <option value="Breakfast">Breakfast</option>
@@ -185,6 +206,15 @@ export function SearchContent() {
                                         type="date"
                                         value={overrideDate}
                                         onChange={e => setOverrideDate(e.target.value)}
+                                        className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 font-medium cursor-pointer shadow-inner"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-gray-700 ml-1">Time</label>
+                                    <input 
+                                        type="time"
+                                        value={overrideTime}
+                                        onChange={e => setOverrideTime(e.target.value)}
                                         className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 font-medium cursor-pointer shadow-inner"
                                     />
                                 </div>

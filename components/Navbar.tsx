@@ -20,6 +20,14 @@ export default function Navbar() {
       >
         <span className="text-xs font-medium">Search</span>
       </Link>
+      <button 
+        onClick={() => {
+          import("next-auth/react").then(({ signOut }) => signOut());
+        }}
+        className="flex flex-col items-center gap-1 text-gray-500 hover:text-red-600 transition-colors"
+      >
+        <span className="text-xs font-medium">Logout</span>
+      </button>
     </nav>
   );
 }

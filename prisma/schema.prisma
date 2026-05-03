@@ -52,5 +52,6 @@ model CustomFood {
   carbs          Float?
   fat            Float?
   servingSizeG   Float?
+  isFavorite     Boolean  @default(false)
   createdAt      DateTime @default(now())
 }
