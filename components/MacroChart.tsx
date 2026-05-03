@@ -12,7 +12,7 @@ export default function MacroChart({ protein, carbs, fat }: { protein: number, c
     if (data.length === 0) {
         return (
             <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col items-center justify-center py-10 my-4">
-                 <h2 className="text-sm font-semibold text-gray-600 mb-2">Today's Macros</h2>
+                 <h2 className="text-sm font-semibold text-gray-600 mb-2">Today&apos;s Macros</h2>
                  <p className="text-gray-400 text-xs">Log some food to see your macro breakdown!</p>
             </div>
         );
@@ -20,7 +20,7 @@ export default function MacroChart({ protein, carbs, fat }: { protein: number, c
 
     return (
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-600 mb-2">Today's Macro Split</h2>
+            <h2 className="text-sm font-semibold text-gray-600 mb-2">Today&apos;s Macro Split</h2>
             <div className="w-full flex items-center justify-between">
                 <div className="w-1/2 h-40">
                     <ResponsiveContainer width="100%" height="100%">

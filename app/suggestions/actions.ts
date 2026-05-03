@@ -110,7 +110,7 @@ export async function processSuggestionChat(userInput?: string, currentLocalTime
     const analysis = await analyzeMeal(userInput);
     
     if (analysis.success && analysis.data && analysis.data.length > 0) {
-         let logDate = new Date();
+         const logDate = new Date();
          let type = "Breakfast";
          const hasTime = userInput.match(/(?:at|around)\s+(\d+(?::\d+)?\s*(?:am|pm)?)/i);
          let timeMessage = "I am autologging this. You can correct the timing, meal type, or delete it in your history if needed.";

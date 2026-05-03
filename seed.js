@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 
@@ -74,7 +75,6 @@ async function main() {
     dinnerDate.setHours(19, 0, 0, 0); // 7 PM Dinner
     // For today (i=0), don't add dinner by default yet so user can test the suggestion "We noticed you haven't logged much"
     // Actually I'll do dinner if i>0 so streaks make sense. For i=0, we only added 1200 kcal. Streak logic ignores today if today is incomplete.
-    let dinnerCalories = 800; // Total 2000. Wait, user needs 2200. I'll add 1050 kcal.
     
     // For today (i=0), let's skip dinner so they are at 1200 / 2200, ripe for a suggestion!
     if (i > 0) {
