@@ -65,7 +65,7 @@ export async function analyzeMeal(query: string): Promise<AnalyzeMealResponse> {
   }
 }
 
-export async function saveMealLog(items: ParsedFoodItem[], type: string, overrideDate?: string): Promise<{ success: boolean; error?: string }> {
+export async function saveMealLog(items: ParsedFoodItem[], type: string, overrideDate?: string, overrideTime?: string): Promise<{ success: boolean; error?: string }> {
   try {
     if (!items || items.length === 0) {
       return { success: false, error: "No items to save." };
@@ -82,11 +82,16 @@ export async function saveMealLog(items: ParsedFoodItem[], type: string, overrid
       data: {
         userId: user.id,
         type: type,
-        date: overrideDate ? (() => {
+        date: (() => {
             const now = new Date();
-            const timeString = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-            return new Date(`${overrideDate}T${timeString}`);
-        })() : new Date(),
+            const dateStr = overrideDate ? overrideDate : `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+            
+            let timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+            if (overrideTime) {
+                timeStr = `${overrideTime}:00`;
+            }
+            return new Date(`${dateStr}T${timeStr}`);
+        })(),
         items: {
           create: items.map(item => ({
             name: item.name,

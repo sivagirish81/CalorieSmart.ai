@@ -69,3 +69,18 @@ export async function logCustomFood(foodId: string, mealType: string) {
 
     return { success: true };
 }
+
+export async function toggleFavorite(foodId: string, isFavorite: boolean) {
+    const session = await auth();
+    if (!session?.user?.email) throw new Error("Unauthorized");
+
+    const user = await prisma.user.findUnique({ where: { email: session.user.email }});
+    if (!user) throw new Error("User missing");
+
+    await prisma.customFood.updateMany({
+        where: { id: foodId, userId: user.id },
+        data: { isFavorite }
+    });
+
+    return { success: true };
+}
