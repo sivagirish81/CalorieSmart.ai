@@ -43,7 +43,10 @@ export async function analyzeMeal(query: string): Promise<AnalyzeMealResponse> {
     const totalCalories = items.reduce((sum, item) => sum + item.nutrition.calories, 0);
     
     // Determine the literal data source for auditing
-    const activeSource = process.env.NUTRITION_SOURCE === "API" ? "Live Remote API" : "Local Mock Provider";
+    const activeSource = process.env.NUTRITION_SOURCE === "API" ? "Live Remote API" 
+                       : process.env.NUTRITION_SOURCE === "LOCAL" ? "Local SQLite Database"
+                       : process.env.NUTRITION_SOURCE === "HYBRID" ? "Hybrid AI Engine"
+                       : "Local Mock Provider";
 
     const payload = {
       success: true,

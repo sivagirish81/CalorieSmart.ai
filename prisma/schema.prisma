@@ -55,3 +55,13 @@ model CustomFood {
   isFavorite     Boolean  @default(false)
   createdAt      DateTime @default(now())
 }
+
+model LocalFoodDictionary {
+  id             String   @id @default(cuid())
+  name           String   @unique
+  calories       Int
+  protein_g      Float
+  carbohydrates_total_g Float
+  fat_total_g    Float
+  serving_size_g Float
+}

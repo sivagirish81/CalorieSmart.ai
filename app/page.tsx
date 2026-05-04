@@ -168,32 +168,32 @@ export default async function Dashboard() {
             <span className="text-4xl font-black text-blue-600">{Math.round(remaining)}</span>
             <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">kcal left</p>
           </div>
-          <Link href="/profile" className="p-3 bg-gray-50 rounded-full hover:bg-gray-100 transition-colors border border-gray-100">
+          <Link href="/profile" className="p-3 bg-white/50 backdrop-blur-md rounded-full hover:bg-white/80 transition-all border border-white shadow-sm hover:shadow-md hover:-translate-y-0.5">
              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
           </Link>
         </div>
       </header>
 
       {/* Progress Card */}
-      <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+      <div className="bg-white/60 backdrop-blur-xl p-6 rounded-3xl shadow-lg shadow-blue-900/5 border border-white/60 hover:-translate-y-1 transition-all duration-300">
         <div className="flex justify-between items-center mb-4">
           <span className="text-sm font-semibold text-gray-600">Daily Progress</span>
           <span className="text-sm font-bold text-gray-900">{Math.round(percentage)}%</span>
         </div>
         <div className="h-4 w-full bg-gray-100 rounded-full overflow-hidden">
           <div
-            className={`h-full transition-all duration-1000 ease-out ${getProgressBarColor()}`}
+            className={`h-full transition-all duration-1000 ease-out bg-gradient-to-r ${percentage < 70 ? 'from-green-400 to-emerald-500' : percentage < 95 ? 'from-yellow-400 to-amber-500' : 'from-red-400 to-rose-500'}`}
             style={{ width: `${percentage}%` }}
           />
         </div>
         <div className="grid grid-cols-2 gap-4 mt-6">
-          <div className="bg-gray-50 p-4 rounded-2xl">
+          <div className="bg-white/50 p-4 rounded-2xl border border-white shadow-inner">
             <p className="text-xs text-gray-500 mb-1">Consumed</p>
-            <p className="text-xl font-bold text-gray-900">{consumed} <span className="text-xs font-normal">kcal</span></p>
+            <p className="text-xl font-black text-gray-900 tracking-tight">{consumed} <span className="text-xs font-semibold text-gray-400">kcal</span></p>
           </div>
-          <div className="bg-gray-50 p-4 rounded-2xl">
+          <div className="bg-white/50 p-4 rounded-2xl border border-white shadow-inner">
             <p className="text-xs text-gray-500 mb-1">Limit</p>
-            <p className="text-xl font-bold text-gray-900">{limit} <span className="text-xs font-normal">kcal</span></p>
+            <p className="text-xl font-black text-gray-900 tracking-tight">{limit} <span className="text-xs font-semibold text-gray-400">kcal</span></p>
           </div>
         </div>
       </div>
@@ -207,21 +207,21 @@ export default async function Dashboard() {
         <div className="grid grid-cols-3 gap-3">
           <Link
             href="/search"
-            className="flex flex-col items-center justify-center p-4 bg-blue-600 text-white rounded-3xl transition-transform hover:scale-[0.98] active:scale-95 shadow-md text-center"
+            className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-3xl transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-blue-500/20 active:scale-95 shadow-md border border-blue-400/50"
           >
             <span className="text-2xl mb-1">🔍</span>
             <span className="text-xs font-semibold">Log NLP</span>
           </Link>
           <Link
             href="/custom-food"
-            className="flex flex-col items-center justify-center p-4 bg-purple-600 text-white rounded-3xl transition-transform hover:scale-[0.98] active:scale-95 shadow-md text-center"
+            className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-purple-500 to-fuchsia-600 text-white rounded-3xl transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-purple-500/20 active:scale-95 shadow-md border border-purple-400/50"
           >
             <span className="text-2xl mb-1">📝</span>
             <span className="text-xs font-semibold">Custom</span>
           </Link>
           <Link
             href="/suggestions"
-            className="flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-3xl transition-transform hover:scale-[0.98] active:scale-95 text-center shadow-sm"
+            className="flex flex-col items-center justify-center p-6 bg-white/60 backdrop-blur-md border border-white shadow-sm rounded-3xl transition-all hover:scale-[1.02] hover:shadow-lg hover:bg-white/80 active:scale-95"
           >
             <span className="text-2xl mb-1 text-gray-900">🤖</span>
             <span className="text-xs font-semibold text-gray-700">Suggest</span>
@@ -240,17 +240,21 @@ export default async function Dashboard() {
         </div>
         
         {formattedMeals.length === 0 ? (
-           <div className="p-8 text-center bg-gray-50 rounded-3xl border border-gray-100 border-dashed">
-             <p className="text-gray-500 text-sm font-medium">No meals logged yet today.</p>
+           <div className="p-10 text-center bg-white/40 backdrop-blur-md rounded-3xl border border-white/60 shadow-inner">
+             <div className="text-4xl mb-3 opacity-50">🍽️</div>
+             <p className="text-gray-500 text-sm font-semibold">No meals logged yet today.</p>
+             <p className="text-gray-400 text-xs mt-1">Tap the search icon to log your first meal!</p>
            </div>
         ) : (
           <div className="space-y-3">
             {formattedMeals.map((meal, i) => (
-              <div key={i} className="flex justify-between items-center p-4 bg-white rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+              <div key={i} className="flex justify-between items-center p-4 bg-white/70 backdrop-blur-md rounded-2xl border border-white shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 hover:bg-white cursor-default">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-xl">
-                    {/* Simplified icon logic */}
-                    {meal.type === "Meal" ? "🥗" : "🍎"}
+                  <div className="w-10 h-10 bg-white/50 backdrop-blur-md rounded-xl flex items-center justify-center text-xl shadow-inner border border-white">
+                    {meal.type === "Breakfast" ? "🍳" : 
+                     meal.type === "Lunch" ? "🥗" : 
+                     meal.type === "Dinner" ? "🍽️" : 
+                     meal.type === "Snack" ? "🍎" : "🍱"}
                   </div>
                   <div>
                     <p className="font-bold text-sm text-gray-800 capitalize">{meal.name}</p>
