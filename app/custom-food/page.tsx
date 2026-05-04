@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { addCustomFood, getMyCustomFoods, logCustomFood } from "./actions";
+import { addCustomFood, getMyCustomFoods, logCustomFood, toggleFavorite } from "./actions";
 
 export default function CustomFoodPage() {
-    const [foods, setFoods] = useState<Array<{ id: string, name: string, calories: number }>>([]);
+    const [foods, setFoods] = useState<Array<{ id: string, name: string, calories: number, isFavorite: boolean }>>([]);
     const [loading, setLoading] = useState(true);
     
     const [name, setName] = useState("");
@@ -60,6 +60,15 @@ export default function CustomFoodPage() {
         }
     };
 
+    const handleToggleFavorite = async (id: string, currentStatus: boolean) => {
+        try {
+            await toggleFavorite(id, !currentStatus);
+            setFoods(foods.map(f => f.id === id ? { ...f, isFavorite: !currentStatus } : f));
+        } catch {
+            alert("Error updating favorite status");
+        }
+    };
+
     return (
         <main className="min-h-screen bg-gray-50 pb-20">
             <header className="bg-white px-4 pt-12 pb-6 shadow-sm border-b border-gray-100 flex items-center justify-between sticky top-0 z-10">
@@ -99,7 +108,12 @@ export default function CustomFoodPage() {
                         foods.map(food => (
                              <div key={food.id} className="flex justify-between items-center p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
                                 <div>
-                                    <p className="font-bold text-gray-900">{food.name}</p>
+                                    <p className="font-bold text-gray-900 flex items-center gap-2">
+                                        {food.name}
+                                        <button onClick={() => handleToggleFavorite(food.id, food.isFavorite)} className={`text-xl transition-colors ${food.isFavorite ? 'text-red-500 hover:text-red-600' : 'text-gray-300 hover:text-red-400'}`}>
+                                            ♥
+                                        </button>
+                                    </p>
                                     <p className="text-xs text-gray-500">{food.calories} kcal</p>
                                 </div>
                                 <button onClick={() => handleLog(food.id)} className="px-4 py-2 bg-blue-100 text-blue-700 font-bold text-sm rounded-lg hover:bg-blue-200 transition-colors">

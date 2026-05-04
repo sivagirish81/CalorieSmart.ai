@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import DeleteButton from "./DeleteButton";
 
 export const dynamic = "force-dynamic";
 
@@ -100,7 +101,10 @@ export default async function HistoryPage() {
                     <div key={log.id} className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
                       <div className="flex justify-between items-center mb-3">
                         <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2.5 py-1.5 rounded-lg">{log.type}</span>
-                        <span className="text-xs text-gray-400 font-medium bg-gray-50 px-2 py-1 rounded-md">{log.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <div>
+                            <span className="text-xs text-gray-400 font-medium bg-gray-50 px-2 py-1 rounded-md">{log.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            <DeleteButton logId={log.id} />
+                        </div>
                       </div>
                       <div className="space-y-3 mt-4">
                         {log.items.map((item: HistoryItem) => (

@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import StreakBanner from "@/components/StreakBanner";
+import WeeklyChart from "@/components/WeeklyChart";
+import MacroChart from "@/components/MacroChart";
 // Ensure this page always fetches fresh data on load
 export const dynamic = "force-dynamic";
 
@@ -43,13 +45,13 @@ export default async function Dashboard() {
     }
   });
 
-  // Calculate 3-day Streak target meeting
-  const fourDaysAgo = new Date();
-  fourDaysAgo.setDate(fourDaysAgo.getDate() - 3);
-  fourDaysAgo.setHours(0, 0, 0, 0);
+  // Fetch past 7 days for Chart and Streak
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
 
   const streakMeals = await prisma.mealLog.findMany({
-    where: { userId: user.id, date: { gte: fourDaysAgo } },
+    where: { userId: user.id, date: { gte: sevenDaysAgo } },
     include: { items: true }
   });
 
@@ -59,6 +61,19 @@ export default async function Dashboard() {
       if (!dailyTotals[dateStr]) dailyTotals[dateStr] = 0;
       log.items.forEach((item: { calories: number }) => { dailyTotals[dateStr] += item.calories; });
   });
+
+  // Prepare chart data for the past 7 days
+  const chartData = [];
+  for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toLocaleDateString("en-US");
+      const dayName = d.toLocaleDateString("en-US", { weekday: 'short' });
+      chartData.push({
+          date: dayName,
+          calories: Math.round(dailyTotals[dateStr] || 0)
+      });
+  }
 
   const checkStreak = (startIndex: number) => {
       for (let i = startIndex; i < startIndex + 3; i++) {
@@ -74,12 +89,18 @@ export default async function Dashboard() {
 
   // Calculate consumed calories & prepare recent meals list
   let consumed = 0;
+  let totalProtein = 0;
+  let totalCarbs = 0;
+  let totalFat = 0;
   const formattedMeals: Array<{ name: string; time: string; kcal: number; type: string }> = [];
 
   for (const log of todaysMeals) {
     let logTotal = 0;
     for (const item of log.items) {
       logTotal += item.calories;
+      totalProtein += item.protein || 0;
+      totalCarbs += item.carbs || 0;
+      totalFat += item.fat || 0;
       
       // Push each item into our recent meals display
       formattedMeals.push({
@@ -104,13 +125,43 @@ export default async function Dashboard() {
 
   const todayStr = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
+  let nickname = "Clean Eater 🥗";
+  if (totalProtein === 0 && totalCarbs === 0 && totalFat === 0) {
+      nickname = "Fasting Hero 🧘";
+  } else if (totalProtein >= totalCarbs && totalProtein >= totalFat) {
+      nickname = "Protein Paladin 🥩";
+  } else if (totalCarbs > totalProtein && totalCarbs > totalFat) {
+      nickname = "Carb-loader 🍞";
+  } else {
+      nickname = "Keto Ninja 🥑";
+  }
+
+  const currentHour = new Date().getHours();
+  let funWarning = null;
+  if (consumed > limit) {
+      if (currentHour >= 21 || currentHour < 4) {
+          funWarning = "Whoa there night owl! 🦉 You're eating late AND you've overshot your calories for the day... step away from the fridge! 🛑";
+      } else {
+          funWarning = "Hey, you better stop now! 🛑 You are officially overshooting your calorie count for the day!";
+      }
+  } else if (consumed > limit * 0.9 && (currentHour >= 21 || currentHour < 4)) {
+      funWarning = "Late night snacking? 🌙 You are dangerously close to your calorie limit. Watch out!";
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <StreakBanner achieved={streakAchieved} />
+      
+      {funWarning && (
+         <div className="bg-red-50 border border-red-200 p-4 rounded-2xl text-red-700 font-bold text-sm shadow-sm animate-pulse flex items-center gap-3">
+            <span className="text-2xl">⚠️</span> {funWarning}
+         </div>
+      )}
+
       <header className="flex justify-between items-end">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-gray-900">Hello, {user.name?.split(' ')[0] || 'Today'}</h1>
-          <p className="text-gray-500">{todayStr}</p>
+          <p className="text-gray-500">{todayStr} • <span className="font-semibold text-blue-600">{nickname}</span></p>
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right">
@@ -147,6 +198,9 @@ export default async function Dashboard() {
         </div>
       </div>
 
+      {/* Macro Split Chart */}
+      <MacroChart protein={totalProtein} carbs={totalCarbs} fat={totalFat} />
+
       {/* Quick Actions */}
       <div className="space-y-4">
         <h2 className="text-lg font-bold text-gray-900">Quick Actions</h2>
@@ -174,6 +228,9 @@ export default async function Dashboard() {
           </Link>
         </div>
       </div>
+
+      {/* Weekly Chart */}
+      <WeeklyChart data={chartData} limit={limit} />
 
       {/* Recent Meals (Dynamic) */}
       <div className="space-y-4 pt-4">

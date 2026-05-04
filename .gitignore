@@ -43,3 +43,8 @@ next-env.d.ts
 /lib/generated/prisma
 prisma/*.db
 prisma/*.db-journal
+
+CalorieSmart_AI_Presentation.md
+CalorieSmart_AI_Presentation.pptx
+Sprint_2_Report.md
+generate_ppt.js
