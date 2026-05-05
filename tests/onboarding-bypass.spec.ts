@@ -28,7 +28,13 @@ test('Security test: Prevent onboarding bypass', async ({ page }) => {
 
   // 7. Verify we can access them AFTER completing onboarding
   await page.fill('input[name="name"]', 'Reformed Hacker');
+  await page.fill('input[name="age"]', '30');
+  await page.fill('input[name="weightKg"]', '70');
+  await page.fill('input[name="heightCm"]', '175');
+  await page.selectOption('select[name="gender"]', 'M');
+  await page.selectOption('select[name="activityLevel"]', '1.2');
   await page.fill('input[name="calorieBound"]', '2000');
+  await page.selectOption('select[name="dietaryPreference"]', 'Omnivore');
   await page.click('button[type="submit"]');
 
   await expect(page).toHaveURL('http://localhost:3000/');

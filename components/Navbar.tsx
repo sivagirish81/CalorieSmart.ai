@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const hidden = ['/login', '/signup', '/onboarding'];
+  if (hidden.includes(pathname)) return null;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3 flex justify-around items-center z-50 md:top-0 md:bottom-auto">
@@ -19,6 +21,12 @@ export default function Navbar() {
         className={`flex flex-col items-center gap-1 ${pathname === "/search" ? "text-blue-600" : "text-gray-500"}`}
       >
         <span className="text-xs font-medium">Search</span>
+      </Link>
+      <Link 
+        href="/analytics" 
+        className={`flex flex-col items-center gap-1 ${pathname === "/analytics" ? "text-blue-600" : "text-gray-500"}`}
+      >
+        <span className="text-xs font-medium">Analytics</span>
       </Link>
       <button 
         onClick={() => {

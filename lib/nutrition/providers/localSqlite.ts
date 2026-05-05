@@ -5,7 +5,30 @@ export class LocalSqliteProvider implements NutritionProvider {
   async parseNaturalLanguage(query: string): Promise<ParsedFoodItem[]> {
     if (!query) return [];
 
-    const normalizedQuery = query.toLowerCase();
+    const normalizedQuery = query.toLowerCase().trim();
+
+    // Try full query match first (handles compound names like "mutton ghee roast biryani")
+    const fullMatch = await prisma.localFoodDictionary.findFirst({
+      where: { name: { equals: normalizedQuery } }
+    });
+
+    if (fullMatch) {
+      return [{
+        name: fullMatch.name,
+        serving_size_g: fullMatch.serving_size_g,
+        nutrition: {
+          calories: fullMatch.calories,
+          protein_g: fullMatch.protein_g,
+          carbohydrates_total_g: fullMatch.carbohydrates_total_g,
+          fat_total_g: fullMatch.fat_total_g,
+          sugar_g: 0,
+          fiber_g: 0,
+          sodium_mg: 0,
+          cholesterol_mg: 0,
+        }
+      }];
+    }
+
     const words = normalizedQuery.split(/\W+/);
     
     // Simple mock NLP: look for matching dictionary items in the user's query

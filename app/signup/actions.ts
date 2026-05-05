@@ -8,9 +8,8 @@ import { AuthError } from "next-auth";
 export async function registerAction(prevState: unknown, formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
-  const name = formData.get("name") as string;
 
-  if (!email || !password || !name) {
+  if (!email || !password) {
     return { error: "Please fill out all required fields." };
   }
 
@@ -24,13 +23,7 @@ export async function registerAction(prevState: unknown, formData: FormData) {
     
     // Create the user with default Profile data
     await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name,
-        calorieBound: 2000,
-        dietaryPreference: "Omnivore"
-      }
+      data: { email, password: hashedPassword }
     });
   } catch (error) {
     console.error("Registration error", error);

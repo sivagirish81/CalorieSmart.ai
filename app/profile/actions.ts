@@ -9,17 +9,37 @@ export async function getUserProfile() {
     const session = await auth();
     if (!session?.user?.email) throw new Error("Unauthorized");
 
-    const user = await prisma.user.findUnique({ where: { email: session.user.email }});
+    const user = await prisma.user.findUnique({ 
+        where: { email: session.user.email },
+        select: {
+            name: true, calorieBound: true, dietaryPreference: true,
+            proteinGoalG: true, carbsGoalG: true, fatGoalG: true,
+            weightKg: true, weightLogs: { orderBy: { date: 'asc' } }
+        }
+    });
     if (!user) throw new Error("User record clearly missing");
 
-    return user;
+    return {
+      ...user,
+      weightLogs: user.weightLogs.map(log => ({
+        ...log,
+        date: log.date.toISOString()
+      }))
+    };
   } catch (error) {
     console.error("Failed to fetch profile", error);
     throw new Error("Unable to fetch user profile");
   }
 }
 
-export async function updateProfile(data: { name: string; calorieBound: number; dietaryPreference: string }) {
+export async function updateProfile(data: { 
+  name: string; 
+  calorieBound: number; 
+  dietaryPreference: string;
+  proteinGoalG?: number;
+  carbsGoalG?: number;
+  fatGoalG?: number;
+}) {
   try {
     const session = await auth();
     if (!session?.user?.email) throw new Error("Unauthorized");
@@ -32,7 +52,10 @@ export async function updateProfile(data: { name: string; calorieBound: number; 
       data: {
         name: data.name,
         calorieBound: data.calorieBound,
-        dietaryPreference: data.dietaryPreference
+        dietaryPreference: data.dietaryPreference,
+        ...(data.proteinGoalG !== undefined && { proteinGoalG: data.proteinGoalG }),
+        ...(data.carbsGoalG !== undefined && { carbsGoalG: data.carbsGoalG }),
+        ...(data.fatGoalG !== undefined && { fatGoalG: data.fatGoalG }),
       }
     });
 

@@ -108,6 +108,9 @@ export async function saveMealLog(items: ParsedFoodItem[], type: string, overrid
       }
     });
 
+    const { updateStreak } = await import("@/lib/streak");
+    await updateStreak(user.id);
+
     return { success: true };
   } catch (error: unknown) {
     console.error("Error saving meal log:", error);

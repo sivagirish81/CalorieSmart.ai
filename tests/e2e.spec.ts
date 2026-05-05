@@ -21,6 +21,12 @@ test('Full user journey: signup, onboard, log meal', async ({ page }) => {
 
   // 4. Fill onboarding form
   await page.fill('input[name="name"]', 'Playwright Tester');
+  await page.fill('input[name="age"]', '30');
+  await page.fill('input[name="weightKg"]', '70');
+  await page.fill('input[name="heightCm"]', '175');
+  await page.selectOption('select[name="gender"]', 'M');
+  await page.selectOption('select[name="activityLevel"]', '1.2');
+  // calorieBound is auto-calculated but we can still fill/override it
   await page.fill('input[name="calorieBound"]', '2000');
   await page.selectOption('select[name="dietaryPreference"]', 'Omnivore');
   await page.click('button[type="submit"]');
@@ -30,7 +36,7 @@ test('Full user journey: signup, onboard, log meal', async ({ page }) => {
   await expect(page.locator('h1')).toContainText('Hello, Playwright');
 
   // 5. Navigate to search / log meal
-  await page.click('text=Log Meal');
+  await page.click('text=Log NLP');
   await expect(page).toHaveURL(/.*\/search/);
 
   // 6. Search for food

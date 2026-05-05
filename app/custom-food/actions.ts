@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
+import { revalidatePath } from "next/cache";
 
 export async function addCustomFood(data: { name: string; calories: number; protein?: number; carbs?: number; fat?: number; servingSizeG?: number }) {
     const session = await auth();
@@ -22,6 +23,8 @@ export async function addCustomFood(data: { name: string; calories: number; prot
         }
     });
 
+    revalidatePath("/");
+    revalidatePath("/custom-food");
     return { success: true };
 }
 
@@ -37,7 +40,7 @@ export async function getMyCustomFoods() {
         orderBy: { createdAt: "desc" }
     });
 
-    return foods;
+    return foods.map(f => ({ ...f, createdAt: f.createdAt.toISOString() }));
 }
 
 export async function logCustomFood(foodId: string, mealType: string) {
@@ -67,6 +70,8 @@ export async function logCustomFood(foodId: string, mealType: string) {
         }
     });
 
+    revalidatePath("/");
+    revalidatePath("/custom-food");
     return { success: true };
 }
 

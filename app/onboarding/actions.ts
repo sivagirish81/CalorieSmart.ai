@@ -8,10 +8,22 @@ export async function submitOnboarding(prevState: unknown, formData: FormData) {
   const name = formData.get("name") as string;
   const calorieBound = Number(formData.get("calorieBound"));
   const dietaryPreference = formData.get("dietaryPreference") as string;
+  
+  const age = formData.get("age") ? Number(formData.get("age")) : null;
+  const heightCm = formData.get("heightCm") ? Number(formData.get("heightCm")) : null;
+  const weightKg = formData.get("weightKg") ? Number(formData.get("weightKg")) : null;
+  const gender = formData.get("gender") as string | null;
+  const activityLevel = formData.get("activityLevel") as string | null;
+  const timezone = (formData.get("timezone") as string) || "UTC";
 
   if (!name || !calorieBound || !dietaryPreference) {
     return { error: "Please complete all profile fields to continue." };
   }
+
+  // Calculate default macros: 30% protein, 40% carbs, 30% fat
+  const proteinGoalG = Math.round((calorieBound * 0.3) / 4);
+  const carbsGoalG = Math.round((calorieBound * 0.4) / 4);
+  const fatGoalG = Math.round((calorieBound * 0.3) / 9);
 
   try {
     const session = await auth();
@@ -26,6 +38,15 @@ export async function submitOnboarding(prevState: unknown, formData: FormData) {
         name,
         calorieBound,
         dietaryPreference,
+        age,
+        heightCm,
+        weightKg,
+        gender,
+        activityLevel,
+        proteinGoalG,
+        carbsGoalG,
+        fatGoalG,
+        timezone,
         onboardingComplete: true,
       }
     });

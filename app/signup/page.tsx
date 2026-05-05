@@ -18,18 +18,7 @@ export default function SignUp() {
           <p className="text-gray-500 font-medium text-sm">Join CalorieSmart.ai today</p>
         </div>
 
-        <form action={formAction} className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-gray-700">Display Name</label>
-            <input
-              type="text"
-              name="name"
-              placeholder="John Doe"
-              required
-              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 shadow-inner transition-colors focus:bg-white"
-            />
-          </div>
-
+        <form action={formAction} className="space-y-4 pt-4" suppressHydrationWarning>
           <div className="space-y-2">
             <label className="text-sm font-bold text-gray-700">Email Address</label>
             <input
@@ -37,6 +26,7 @@ export default function SignUp() {
               name="email"
               placeholder="student@university.edu"
               required
+              suppressHydrationWarning
               className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 shadow-inner transition-colors focus:bg-white"
             />
           </div>
@@ -49,6 +39,7 @@ export default function SignUp() {
               placeholder="••••••••"
               required
               minLength={6}
+              suppressHydrationWarning
               className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 shadow-inner transition-colors focus:bg-white"
             />
           </div>

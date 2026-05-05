@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import DeleteButton from "./DeleteButton";
+import EditFoodItem from "./EditFoodItem";
+import { getDayBounds } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -16,9 +18,9 @@ export default async function HistoryPage() {
   if (!user) redirect("/login");
 
   // Get the date 14 days ago (start of day)
-  const fourteenDaysAgo = new Date();
-  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
-  fourteenDaysAgo.setHours(0, 0, 0, 0);
+  const d14 = new Date();
+  d14.setDate(d14.getDate() - 14);
+  const { startOfDay: fourteenDaysAgo } = getDayBounds(user.timezone, d14);
 
   // Fetch meal logs from the last 14 days
   const mealLogs = await prisma.mealLog.findMany({
@@ -39,12 +41,16 @@ export default async function HistoryPage() {
   // Group by date string (e.g. "April 9, 2026")
   const groupedLogs: Record<string, { totalKcal: number; logs: typeof mealLogs }> = {};
   const sortedDateStrs: string[] = [];
+  // Store ISO dates for use in links (e.g. "2026-04-14")
+  const isoDateMap: Record<string, string> = {};
 
   for (let i = 0; i < 14; i++) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    const dateStr = d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", weekday: "long" });
+    const dateStr = d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", weekday: "long", timeZone: user.timezone });
+    const isoDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     sortedDateStrs.push(dateStr);
+    isoDateMap[dateStr] = isoDate;
     groupedLogs[dateStr] = { totalKcal: 0, logs: [] };
   }
 
@@ -52,7 +58,7 @@ export default async function HistoryPage() {
   type HistoryItem = HistoryLog["items"][0];
 
   mealLogs.forEach((log: HistoryLog) => {
-    const dateStr = log.date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", weekday: "long" });
+    const dateStr = log.date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", weekday: "long", timeZone: user.timezone });
     if (groupedLogs[dateStr]) {
       groupedLogs[dateStr].logs.push(log);
       
@@ -92,7 +98,7 @@ export default async function HistoryPage() {
                 {logs.length === 0 ? (
                   <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 border-dashed flex flex-col items-center justify-center text-center">
                     <p className="text-sm font-medium text-gray-500 mb-3">No meals logged on this day.</p>
-                    <Link href={`/search?date=${dateStr}`} className="text-xs font-bold bg-blue-50 text-blue-600 px-4 py-2 rounded-xl hover:bg-blue-100 transition-colors shadow-sm">
+                    <Link href={`/search?date=${isoDateMap[dateStr]}`} className="text-xs font-bold bg-blue-50 text-blue-600 px-4 py-2 rounded-xl hover:bg-blue-100 transition-colors shadow-sm">
                       Log a Meal
                     </Link>
                   </div>
@@ -109,13 +115,7 @@ export default async function HistoryPage() {
                       <div className="space-y-3 mt-4">
                         {log.items.map((item: HistoryItem) => (
                           <div key={item.id} className="flex justify-between items-center bg-gray-50 p-4 rounded-2xl border border-gray-100 transition-colors hover:bg-gray-100/50">
-                              <div className="flex flex-col pr-4">
-                                  <span className="font-bold text-sm text-gray-900 capitalize leading-tight">{item.name}</span>
-                                  {item.servingSizeG && <span className="text-xs text-gray-500 mt-1 font-medium">{item.servingSizeG}g serving</span>}
-                              </div>
-                              <div className="text-right shrink-0">
-                                  <span className="font-bold text-gray-900 text-lg">{item.calories} <span className="text-xs font-normal text-gray-400">kcal</span></span>
-                              </div>
+                              <EditFoodItem item={item} />
                           </div>
                         ))}
                       </div>
