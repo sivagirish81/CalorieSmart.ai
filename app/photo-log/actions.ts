@@ -5,10 +5,9 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-
 export async function analyzePhoto(base64Image: string, mimeType: string) {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "dummy_key");
+    const model = genAI.getGenerativeModel({ model: "models/gemini-2.0-flash" });
 
     const prompt = `Analyze this food image. For each food item you see, estimate the nutrition.
 Return ONLY valid JSON in this exact format, no markdown, no explanation:

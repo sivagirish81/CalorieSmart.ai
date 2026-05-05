@@ -5,9 +5,8 @@ import { auth } from "@/auth";
 import Groq from "groq-sdk";
 import { getDayBounds } from "@/lib/time";
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
 export async function processSuggestionChat(userInput?: string, currentLocalTime?: string) {
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || "dummy_key" });
     const session = await auth();
     if (!session?.user?.email) throw new Error("Unauthorized");
 
