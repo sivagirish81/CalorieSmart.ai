@@ -31,7 +31,7 @@ export async function processSuggestionChat(userInput?: string, currentLocalTime
 
     const customFoods = await prisma.customFood.findMany({
         where: { userId: user.id, calories: { lte: remaining } },
-        orderBy: { calories: 'desc' },
+        orderBy: [{ isFavorite: 'desc' }, { calories: 'desc' }],
         take: 3
     });
 
