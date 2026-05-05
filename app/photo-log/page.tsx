@@ -100,6 +100,7 @@ export default function PhotoLogPage() {
                     className="border-2 border-dashed border-blue-200 rounded-3xl p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all bg-white"
                 >
                     {preview ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
                         <img src={preview} alt="Food" className="mx-auto rounded-2xl max-h-64 object-cover" />
                     ) : (
                         <>

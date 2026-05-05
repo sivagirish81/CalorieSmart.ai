@@ -39,7 +39,7 @@ export default function BarcodePage() {
         readerRef.current = reader;
 
         try {
-            await reader.decodeFromVideoDevice(null, videoRef.current!, async (result, err) => {
+            await reader.decodeFromVideoDevice(null, videoRef.current!, async (result) => {
                 if (result) {
                     const code = result.getText();
                     reader.reset();
@@ -48,7 +48,7 @@ export default function BarcodePage() {
                     await lookupBarcode(code);
                 }
             });
-        } catch (e) {
+        } catch {
             setError("Camera access denied. Please allow camera permissions and try again.");
             setScanning(false);
         }
