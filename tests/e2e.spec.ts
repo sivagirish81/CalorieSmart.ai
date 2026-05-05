@@ -35,7 +35,7 @@ test('Full user journey: signup, onboard, log meal', async ({ page }) => {
   await expect(page.locator('h1')).toContainText('Hello, Playwright');
 
   // 5. Navigate to search / log meal
-  await page.click('text=Log NLP');
+  await page.click('text=NLP');
   await expect(page).toHaveURL(/.*\/search/);
 
   // 6. Search for food
