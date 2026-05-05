@@ -82,7 +82,13 @@ export default function ExercisePage() {
         setLogs(data as ExerciseLog[]);
     }, []);
 
-    useEffect(() => { fetchLogs(); }, [fetchLogs]);
+    useEffect(() => {
+        // Defining local async function inside useEffect is a common pattern to avoid lint errors
+        const init = async () => {
+            await fetchLogs();
+        };
+        init();
+    }, [fetchLogs]);
 
     const handleLog = async (e: React.FormEvent) => {
         e.preventDefault();

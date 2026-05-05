@@ -18,7 +18,12 @@ export default function CustomFoodPage() {
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
-        loadData();
+        const init = async () => {
+            const data = await getMyCustomFoods();
+            setFoods(data);
+            setLoading(false);
+        };
+        init();
     }, []);
 
     const loadData = async () => {
