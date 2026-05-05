@@ -1,0 +1,12 @@
+Task ID,Task Description,Assigned Team Member,Assignment Date,Target Completion Date,Status
+1,Initialize Next.js Repository and Tailwind Environment,Siva Girish Ramesh,02/22/2026,02/24/2026,Completed
+2,Draft SQLite Relational Schema via Prisma (Users; Meals),Kranthi Kusal Latchupathula,02/23/2026,02/26/2026,Completed
+3,Deploy Hybrid AI Strategy Pattern (Mock vs CalorieNinjas),Siva Girish Ramesh,02/26/2026,03/01/2026,Completed
+4,Develop Server Actions and NLP Natural Language Extraction Logic,Kranthi Kusal Latchupathula,03/01/2026,03/06/2026,Completed
+5,Write GitHub Actions CI.yml Pipeline configuration,Siva Girish Ramesh,03/06/2026,03/10/2026,Completed
+6,Integrate Global NextAuth Credential Handlers,Kranthi Kusal Latchupathula,03/10/2026,03/20/2026,Moved to Sprint 2
+7,Develop Interactive Onboarding UI with Caloric Goal Mapping,Siva Girish Ramesh,03/11/2026,03/20/2026,Moved to Sprint 2
+8,Implement In-Memory Promise Caching for AI Extraction,Kranthi Kusal Latchupathula,03/13/2026,03/21/2026,Moved to Sprint 2
+9,Build Real-Time Dashboard Caloric Progress Telemetry,Siva Girish Ramesh,03/14/2026,03/21/2026,Moved to Sprint 2
+10,Deploy Automated End-to-End Browser UI Testing Pipeline,Kranthi Kusal Latchupathula,03/15/2026,03/22/2026,Moved to Sprint 2
+11,Design Meal Type Dropdown UI and Disclaimer Elements,Siva Girish Ramesh,03/15/2026,03/22/2026,Moved to Sprint 2

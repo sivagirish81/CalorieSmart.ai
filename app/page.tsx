@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import StreakBanner from "@/components/StreakBanner";
 import WeeklyChart from "@/components/WeeklyChart";
 import MacroChart from "@/components/MacroChart";
+import { getDayBounds } from "@/lib/time";
 // Ensure this page always fetches fresh data on load
 export const dynamic = "force-dynamic";
 
@@ -21,11 +22,7 @@ export default async function Dashboard() {
   if (!user.onboardingComplete) redirect("/onboarding");
 
   // Calculate today's boundaries
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
-  
-  const endOfDay = new Date();
-  endOfDay.setHours(23, 59, 59, 999);
+  const { startOfDay, endOfDay } = getDayBounds(user.timezone);
 
   // Fetch today's meal logs
   const todaysMeals = await prisma.mealLog.findMany({
@@ -37,7 +34,6 @@ export default async function Dashboard() {
       }
     },
     include: {
-      // Include the actual food items to get their calories
       items: true 
     },
     orderBy: {
@@ -45,10 +41,21 @@ export default async function Dashboard() {
     }
   });
 
-  // Fetch past 7 days for Chart and Streak
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-  sevenDaysAgo.setHours(0, 0, 0, 0);
+  const todaysExercise = await prisma.exerciseLog.findMany({
+    where: {
+      userId: user.id,
+      date: {
+        gte: startOfDay,
+        lte: endOfDay,
+      }
+    }
+  });
+  const exerciseBurned = todaysExercise.reduce((sum, log) => sum + log.caloriesBurned, 0);
+
+  // Fetch past 7 days for Chart
+  const d7 = new Date();
+  d7.setDate(d7.getDate() - 6);
+  const { startOfDay: sevenDaysAgo } = getDayBounds(user.timezone, d7);
 
   const streakMeals = await prisma.mealLog.findMany({
     where: { userId: user.id, date: { gte: sevenDaysAgo } },
@@ -57,7 +64,7 @@ export default async function Dashboard() {
 
   const dailyTotals: Record<string, number> = {};
   streakMeals.forEach((log: { date: Date; items: Array<{ calories: number }> }) => {
-      const dateStr = log.date.toLocaleDateString("en-US");
+      const dateStr = log.date.toLocaleDateString("en-US", { timeZone: user.timezone });
       if (!dailyTotals[dateStr]) dailyTotals[dateStr] = 0;
       log.items.forEach((item: { calories: number }) => { dailyTotals[dateStr] += item.calories; });
   });
@@ -67,25 +74,13 @@ export default async function Dashboard() {
   for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const dateStr = d.toLocaleDateString("en-US");
-      const dayName = d.toLocaleDateString("en-US", { weekday: 'short' });
+      const dateStr = d.toLocaleDateString("en-US", { timeZone: user.timezone });
+      const dayName = d.toLocaleDateString("en-US", { weekday: 'short', timeZone: user.timezone });
       chartData.push({
           date: dayName,
           calories: Math.round(dailyTotals[dateStr] || 0)
       });
   }
-
-  const checkStreak = (startIndex: number) => {
-      for (let i = startIndex; i < startIndex + 3; i++) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const dateStr = d.toLocaleDateString("en-US");
-        const total = dailyTotals[dateStr] || 0;
-        if (total < user.calorieBound || total > user.calorieBound + 300) return false;
-      }
-      return true;
-  };
-  const streakAchieved = checkStreak(0) || checkStreak(1);
 
   // Calculate consumed calories & prepare recent meals list
   let consumed = 0;
@@ -114,16 +109,11 @@ export default async function Dashboard() {
   }
 
   const limit = user.calorieBound;
-  const remaining = Math.max(0, limit - consumed);
-  const percentage = Math.min(100, (consumed / limit) * 100);
+  const netCalories = consumed - exerciseBurned; // can be negative if burned > eaten
+  const remaining = Math.max(0, limit - netCalories);
+  const percentage = Math.min(100, Math.max(0, (netCalories / limit) * 100));
 
-  const getProgressBarColor = () => {
-    if (percentage < 70) return "bg-green-500";
-    if (percentage < 95) return "bg-yellow-500";
-    return "bg-red-500";
-  };
-
-  const todayStr = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  const todayStr = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: user.timezone });
 
   let nickname = "Clean Eater 🥗";
   if (totalProtein === 0 && totalCarbs === 0 && totalFat === 0) {
@@ -136,21 +126,22 @@ export default async function Dashboard() {
       nickname = "Keto Ninja 🥑";
   }
 
-  const currentHour = new Date().getHours();
+  // Get current hour in user's local timezone for fun warnings
+  const currentHour = parseInt(new Date().toLocaleString("en-US", { hour: "numeric", hour12: false, timeZone: user.timezone }));
   let funWarning = null;
-  if (consumed > limit) {
+  if (netCalories > limit) {
       if (currentHour >= 21 || currentHour < 4) {
           funWarning = "Whoa there night owl! 🦉 You're eating late AND you've overshot your calories for the day... step away from the fridge! 🛑";
       } else {
           funWarning = "Hey, you better stop now! 🛑 You are officially overshooting your calorie count for the day!";
       }
-  } else if (consumed > limit * 0.9 && (currentHour >= 21 || currentHour < 4)) {
+  } else if (netCalories > limit * 0.9 && (currentHour >= 21 || currentHour < 4)) {
       funWarning = "Late night snacking? 🌙 You are dangerously close to your calorie limit. Watch out!";
   }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <StreakBanner achieved={streakAchieved} />
+      <StreakBanner streak={user.currentStreak} />
       
       {funWarning && (
          <div className="bg-red-50 border border-red-200 p-4 rounded-2xl text-red-700 font-bold text-sm shadow-sm animate-pulse flex items-center gap-3">
@@ -168,65 +159,137 @@ export default async function Dashboard() {
             <span className="text-4xl font-black text-blue-600">{Math.round(remaining)}</span>
             <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">kcal left</p>
           </div>
-          <Link href="/profile" className="p-3 bg-gray-50 rounded-full hover:bg-gray-100 transition-colors border border-gray-100">
+          <Link href="/profile" className="p-3 bg-white/50 backdrop-blur-md rounded-full hover:bg-white/80 transition-all border border-white shadow-sm hover:shadow-md hover:-translate-y-0.5">
              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
           </Link>
         </div>
       </header>
 
       {/* Progress Card */}
-      <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+      <div className="bg-white/60 backdrop-blur-xl p-6 rounded-3xl shadow-lg shadow-blue-900/5 border border-white/60 hover:-translate-y-1 transition-all duration-300">
         <div className="flex justify-between items-center mb-4">
           <span className="text-sm font-semibold text-gray-600">Daily Progress</span>
           <span className="text-sm font-bold text-gray-900">{Math.round(percentage)}%</span>
         </div>
         <div className="h-4 w-full bg-gray-100 rounded-full overflow-hidden">
           <div
-            className={`h-full transition-all duration-1000 ease-out ${getProgressBarColor()}`}
+            className={`h-full transition-all duration-1000 ease-out bg-gradient-to-r ${percentage < 70 ? 'from-green-400 to-emerald-500' : percentage < 95 ? 'from-yellow-400 to-amber-500' : 'from-red-400 to-rose-500'}`}
             style={{ width: `${percentage}%` }}
           />
         </div>
-        <div className="grid grid-cols-2 gap-4 mt-6">
-          <div className="bg-gray-50 p-4 rounded-2xl">
-            <p className="text-xs text-gray-500 mb-1">Consumed</p>
-            <p className="text-xl font-bold text-gray-900">{consumed} <span className="text-xs font-normal">kcal</span></p>
+        <div className="grid grid-cols-3 gap-2 mt-6">
+          <div className="bg-white/50 p-3 rounded-2xl border border-white shadow-inner flex flex-col items-center">
+            <p className="text-[10px] uppercase font-bold text-gray-500 mb-1">Consumed</p>
+            <p className="text-lg font-black text-gray-900 tracking-tight">{consumed}</p>
           </div>
-          <div className="bg-gray-50 p-4 rounded-2xl">
-            <p className="text-xs text-gray-500 mb-1">Limit</p>
-            <p className="text-xl font-bold text-gray-900">{limit} <span className="text-xs font-normal">kcal</span></p>
+          <div className="bg-orange-50/50 p-3 rounded-2xl border border-orange-100 shadow-inner flex flex-col items-center">
+            <p className="text-[10px] uppercase font-bold text-orange-600 mb-1">Burned</p>
+            <p className="text-lg font-black text-orange-600 tracking-tight">{exerciseBurned}</p>
+          </div>
+          <div className="bg-white/50 p-3 rounded-2xl border border-white shadow-inner flex flex-col items-center">
+            <p className="text-[10px] uppercase font-bold text-gray-500 mb-1">Limit</p>
+            <p className="text-lg font-black text-gray-900 tracking-tight">{limit}</p>
           </div>
         </div>
+
+        {user.proteinGoalG && user.carbsGoalG && user.fatGoalG && (
+          <div className="mt-6 space-y-3 bg-white/30 p-4 rounded-2xl border border-white shadow-inner">
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs font-semibold text-gray-600">
+                <span>Protein</span>
+                <span>{Math.round(totalProtein)}g / {user.proteinGoalG}g</span>
+              </div>
+              <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500" style={{ width: `${Math.min(100, (totalProtein / user.proteinGoalG) * 100)}%` }} />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs font-semibold text-gray-600">
+                <span>Carbs</span>
+                <span>{Math.round(totalCarbs)}g / {user.carbsGoalG}g</span>
+              </div>
+              <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full bg-green-500" style={{ width: `${Math.min(100, (totalCarbs / user.carbsGoalG) * 100)}%` }} />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs font-semibold text-gray-600">
+                <span>Fat</span>
+                <span>{Math.round(totalFat)}g / {user.fatGoalG}g</span>
+              </div>
+              <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full bg-yellow-500" style={{ width: `${Math.min(100, (totalFat / user.fatGoalG) * 100)}%` }} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Macro Split Chart */}
       <MacroChart protein={totalProtein} carbs={totalCarbs} fat={totalFat} />
 
-      {/* Quick Actions */}
+      {/* Quick Actions & Water */}
       <div className="space-y-4">
         <h2 className="text-lg font-bold text-gray-900">Quick Actions</h2>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-4 gap-3">
           <Link
             href="/search"
-            className="flex flex-col items-center justify-center p-4 bg-blue-600 text-white rounded-3xl transition-transform hover:scale-[0.98] active:scale-95 shadow-md text-center"
+            className="flex flex-col items-center justify-center p-3 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-3xl transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-blue-500/20 active:scale-95 shadow-md border border-blue-400/50"
           >
-            <span className="text-2xl mb-1">🔍</span>
-            <span className="text-xs font-semibold">Log NLP</span>
+            <span className="text-xl mb-1">🔍</span>
+            <span className="text-[10px] font-bold text-center leading-tight">NLP</span>
+          </Link>
+          <Link
+            href="/photo-log"
+            className="flex flex-col items-center justify-center p-3 bg-gradient-to-br from-emerald-500 to-green-600 text-white rounded-3xl transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-emerald-500/20 active:scale-95 shadow-md border border-emerald-400/50"
+          >
+            <span className="text-xl mb-1">📸</span>
+            <span className="text-[10px] font-bold text-center leading-tight">Photo</span>
+          </Link>
+          <Link
+            href="/barcode"
+            className="flex flex-col items-center justify-center p-3 bg-gradient-to-br from-orange-500 to-amber-600 text-white rounded-3xl transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-orange-500/20 active:scale-95 shadow-md border border-orange-400/50"
+          >
+            <span className="text-xl mb-1">🏷️</span>
+            <span className="text-[10px] font-bold text-center leading-tight">Scan</span>
           </Link>
           <Link
             href="/custom-food"
-            className="flex flex-col items-center justify-center p-4 bg-purple-600 text-white rounded-3xl transition-transform hover:scale-[0.98] active:scale-95 shadow-md text-center"
+            className="flex flex-col items-center justify-center p-3 bg-gradient-to-br from-purple-500 to-fuchsia-600 text-white rounded-3xl transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-purple-500/20 active:scale-95 shadow-md border border-purple-400/50"
           >
-            <span className="text-2xl mb-1">📝</span>
-            <span className="text-xs font-semibold">Custom</span>
+            <span className="text-xl mb-1">📝</span>
+            <span className="text-[10px] font-bold text-center leading-tight">Lib</span>
           </Link>
           <Link
             href="/suggestions"
-            className="flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-3xl transition-transform hover:scale-[0.98] active:scale-95 text-center shadow-sm"
+            className="flex flex-col items-center justify-center p-3 bg-white/60 backdrop-blur-md border border-white shadow-sm rounded-3xl transition-all hover:scale-[1.02] hover:shadow-lg hover:bg-white/80 active:scale-95"
           >
-            <span className="text-2xl mb-1 text-gray-900">🤖</span>
-            <span className="text-xs font-semibold text-gray-700">Suggest</span>
+            <span className="text-xl mb-1 text-gray-900">🤖</span>
+            <span className="text-[10px] font-bold text-center leading-tight text-gray-700">Coach</span>
+          </Link>
+          <Link
+            href="/analytics"
+            className="flex flex-col items-center justify-center p-3 bg-white/60 backdrop-blur-md border border-white shadow-sm rounded-3xl transition-all hover:scale-[1.02] hover:shadow-lg hover:bg-white/80 active:scale-95"
+          >
+            <span className="text-xl mb-1 text-gray-900">📊</span>
+            <span className="text-[10px] font-bold text-center leading-tight text-gray-700">Trends</span>
+          </Link>
+          <Link
+            href="/exercise"
+            className="flex flex-col items-center justify-center p-3 bg-white/60 backdrop-blur-md border border-white shadow-sm rounded-3xl transition-all hover:scale-[1.02] hover:shadow-lg hover:bg-white/80 active:scale-95"
+          >
+            <span className="text-xl mb-1 text-gray-900">🏃</span>
+            <span className="text-[10px] font-bold text-center leading-tight text-gray-700">Gym</span>
+          </Link>
+          <Link
+            href="/weight"
+            className="flex flex-col items-center justify-center p-3 bg-white/60 backdrop-blur-md border border-white shadow-sm rounded-3xl transition-all hover:scale-[1.02] hover:shadow-lg hover:bg-white/80 active:scale-95"
+          >
+            <span className="text-xl mb-1 text-gray-900">⚖️</span>
+            <span className="text-[10px] font-bold text-center leading-tight text-gray-700">Body</span>
           </Link>
         </div>
+        
       </div>
 
       {/* Weekly Chart */}
@@ -240,17 +303,21 @@ export default async function Dashboard() {
         </div>
         
         {formattedMeals.length === 0 ? (
-           <div className="p-8 text-center bg-gray-50 rounded-3xl border border-gray-100 border-dashed">
-             <p className="text-gray-500 text-sm font-medium">No meals logged yet today.</p>
+           <div className="p-10 text-center bg-white/40 backdrop-blur-md rounded-3xl border border-white/60 shadow-inner">
+             <div className="text-4xl mb-3 opacity-50">🍽️</div>
+             <p className="text-gray-500 text-sm font-semibold">No meals logged yet today.</p>
+             <p className="text-gray-400 text-xs mt-1">Tap the search icon to log your first meal!</p>
            </div>
         ) : (
           <div className="space-y-3">
             {formattedMeals.map((meal, i) => (
-              <div key={i} className="flex justify-between items-center p-4 bg-white rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+              <div key={i} className="flex justify-between items-center p-4 bg-white/70 backdrop-blur-md rounded-2xl border border-white shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 hover:bg-white cursor-default">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-xl">
-                    {/* Simplified icon logic */}
-                    {meal.type === "Meal" ? "🥗" : "🍎"}
+                  <div className="w-10 h-10 bg-white/50 backdrop-blur-md rounded-xl flex items-center justify-center text-xl shadow-inner border border-white">
+                    {meal.type === "Breakfast" ? "🍳" : 
+                     meal.type === "Lunch" ? "🥗" : 
+                     meal.type === "Dinner" ? "🍽️" : 
+                     meal.type === "Snack" ? "🍎" : "🍱"}
                   </div>
                   <div>
                     <p className="font-bold text-sm text-gray-800 capitalize">{meal.name}</p>

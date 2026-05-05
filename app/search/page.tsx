@@ -96,7 +96,7 @@ export function SearchContent() {
 
     return (
         <main className="min-h-screen bg-gray-50 pb-20">
-            <header className="bg-white px-4 pt-12 pb-6 shadow-sm border-b border-gray-100 flex items-center justify-between sticky top-0 z-10">
+            <header className="bg-white/70 backdrop-blur-xl px-4 pt-12 pb-6 shadow-sm border-b border-white/50 flex items-center justify-between sticky top-0 z-10">
                 <Link href="/" className="text-gray-400 hover:text-gray-900 transition-colors p-2 -ml-2">
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"></path>
@@ -109,7 +109,7 @@ export function SearchContent() {
             </header>
 
             <div className="p-4 max-w-lg mx-auto w-full space-y-6">
-                <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 mt-2">
+                <div className="bg-white/60 backdrop-blur-xl p-5 rounded-3xl shadow-lg shadow-blue-900/5 border border-white mt-2 hover:-translate-y-0.5 transition-transform duration-300">
                     <form onSubmit={handleSearch} className="flex flex-col gap-3">
                         <label className="text-sm font-bold text-gray-700 ml-1">What did you eat?</label>
                         <div className="relative">
@@ -143,7 +143,7 @@ export function SearchContent() {
 
                 {/* State: Data Rendered */}
                 {result?.success && result.data && (
-                    <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 animate-in slide-in-from-bottom-2 fade-in duration-300">
+                    <div className="bg-white/60 backdrop-blur-xl rounded-3xl p-5 shadow-lg shadow-blue-900/5 border border-white animate-in slide-in-from-bottom-2 fade-in duration-300">
                         
                         {/* Phase 3 Requirement: Source Indicator */}
                         <div className="flex justify-between items-center mb-6 border-b border-gray-50 pb-4">
@@ -167,7 +167,7 @@ export function SearchContent() {
 
                         <div className="space-y-4">
                             {result.data.map((item, index) => (
-                                <div key={index} className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-blue-100 transition-colors shadow-sm">
+                                <div key={index} className="flex justify-between items-center p-4 bg-white/70 backdrop-blur-md rounded-2xl border border-white hover:border-blue-200 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5">
                                     <div className="overflow-hidden pr-3">
                                         <p className="font-bold text-gray-900 truncate capitalize tracking-tight">{item.name}</p>
                                         <p className="text-xs text-gray-500 font-medium">{item.serving_size_g}g serving</p>
@@ -223,7 +223,7 @@ export function SearchContent() {
                             <button 
                                 onClick={handleSave}
                                 disabled={isSaving || saved}
-                                className={`w-full py-4 text-white font-bold rounded-2xl transition-all shadow-md flex justify-center items-center gap-2 ${saved ? 'bg-green-600 scale-[0.98]' : 'bg-gray-900 hover:bg-black active:scale-[0.98]'} disabled:opacity-80`}
+                                className={`w-full py-4 text-white font-bold rounded-2xl transition-all shadow-md flex justify-center items-center gap-2 hover:-translate-y-1 hover:shadow-lg ${saved ? 'bg-gradient-to-r from-emerald-500 to-green-600 scale-[0.98]' : 'bg-gradient-to-r from-gray-900 to-gray-800 hover:from-black hover:to-gray-900 active:scale-[0.98]'} disabled:opacity-80`}
                             >
                                 {isSaving ? (
                                     <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>

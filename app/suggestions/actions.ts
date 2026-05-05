@@ -2,19 +2,18 @@
 
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
-import { analyzeMeal } from "@/app/search/actions";
+import Groq from "groq-sdk";
+import { getDayBounds } from "@/lib/time";
 
 export async function processSuggestionChat(userInput?: string, currentLocalTime?: string) {
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || "dummy_key" });
     const session = await auth();
     if (!session?.user?.email) throw new Error("Unauthorized");
 
-    const user = await prisma.user.findUnique({ where: { email: session.user.email }});
+    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
     if (!user) throw new Error("User missing");
 
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date();
-    endOfDay.setHours(23, 59, 59, 999);
+    const { startOfDay, endOfDay } = getDayBounds(user.timezone);
 
     const todaysMeals = await prisma.mealLog.findMany({
         where: { userId: user.id, date: { gte: startOfDay, lte: endOfDay } },
@@ -22,12 +21,13 @@ export async function processSuggestionChat(userInput?: string, currentLocalTime
     });
 
     let consumed = 0;
-    todaysMeals.forEach((log: { items: Array<{ calories: number }> }) => {
-        log.items.forEach((item: { calories: number }) => { consumed += item.calories; });
-    });
+    todaysMeals.forEach(log => log.items.forEach(item => { consumed += item.calories; }));
 
-    const limit = user.calorieBound;
-    let remaining = Math.max(0, limit - consumed);
+    const todaysExercise = await prisma.exerciseLog.findMany({
+        where: { userId: user.id, date: { gte: startOfDay, lte: endOfDay } }
+    });
+    const burned = todaysExercise.reduce((s, l) => s + l.caloriesBurned, 0);
+    const remaining = Math.max(0, user.calorieBound - consumed + burned);
 
     const customFoods = await prisma.customFood.findMany({
         where: { userId: user.id, calories: { lte: remaining } },
@@ -35,137 +35,38 @@ export async function processSuggestionChat(userInput?: string, currentLocalTime
         take: 3
     });
 
-    // Handle initial state with no user input
-    if (!userInput) {
-        // If they request suggestions after half day (12pm) and no logs
-        const isAfternoon = currentLocalTime ? parseInt(currentLocalTime.split(":")[0]) >= 12 : new Date().getHours() >= 12;
-        if (todaysMeals.length === 0 && isAfternoon) {
-            return {
-                remaining,
-                suggestionText: "We noticed you haven't logged anything today. How hungry are you? Or did you already eat something?",
-                customFoods: [],
-                promptForInput: true
-            };
-        }
+    // Build context string for Groq
+    const hour = currentLocalTime ? parseInt(currentLocalTime.split(":")[0]) : new Date().getHours();
+    const timeOfDay = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
+    const mealsLogged = todaysMeals.map(log =>
+        log.items.map(item => `${item.name} (${item.calories} kcal)`).join(", ")
+    ).join("; ") || "nothing logged yet";
 
-        // Base suggestions
-        if (remaining <= 0) return { remaining, suggestionText: "You have reached your limit for today. Make sure to hydrate!", customFoods: [], promptForInput: false };
-        if (remaining < 150) return { remaining, suggestionText: "You are very near your limit! Consider a small snack like an apple, cucumber slices, or a handful of almonds (approx 50-80 kcal).", customFoods: [], promptForInput: false };
-        
-        const prompts = {
-           "Omnivore": `You have ${remaining} calories remaining. Consider a balanced meal like grilled chicken breast with vegetables, or a tuna sandwich to hit your macros while staying under ${remaining} kcal.`,
-           "Vegetarian": `You have ${remaining} calories remaining. Consider a meal like lentil soup with a side salad, or tofu stir-fry to get good protein while staying under ${remaining} kcal.`,
-           "Vegan": `You have ${remaining} calories remaining. A black bean bowl with quinoa and avocado would be great, just portion it to fit within ${remaining} kcal.`,
-           "Keto": `You have ${remaining} calories remaining. Salmon with asparagus, or a cobb salad with eggs and bacon, keeps carbs low while staying under ${remaining} kcal.`
-        };
-        const text = (prompts as Record<string, string>)[user.dietaryPreference] || `You have ${remaining} calories remaining!`;
-        return { remaining, suggestionText: text, customFoods, promptForInput: true };
-    }
+    const systemPrompt = `You are a friendly, concise nutrition coach inside a calorie tracking app. 
+The user's daily calorie limit is ${user.calorieBound} kcal. 
+They follow a ${user.dietaryPreference || "omnivore"} diet.
+Protein goal: ${user.proteinGoalG || "not set"}g, Carbs goal: ${user.carbsGoalG || "not set"}g, Fat goal: ${user.fatGoalG || "not set"}g.
+Today (${timeOfDay}): consumed ${consumed} kcal, burned ${burned} kcal through exercise, ${remaining} kcal remaining.
+Meals logged today: ${mealsLogged}.
+Keep responses under 3 sentences. Be specific, practical, and encouraging. Never suggest water tracking.`;
 
-    // Handle user input
-    const normalizedInput = userInput.toLowerCase();
-    
-    // Check if the user is just saying they are hungry without describing food
-    if (normalizedInput.includes("hungry") && !normalizedInput.includes("ate") && !normalizedInput.includes("had") && !normalizedInput.includes("not hungry")) {
-         return { 
-            remaining, 
-            suggestionText: `Got it! Since you are hungry, let's look at some bigger meals. You have ${remaining} calories left. How about a filling steak salad, a hearty quinoa bowl, or a substantial chicken wrap?`, 
-            customFoods, 
-            promptForInput: true 
-         };
-    }
+    const messages = userInput
+        ? [{ role: "user" as const, content: userInput }]
+        : [{ role: "user" as const, content: `Give me a meal suggestion for this ${timeOfDay} based on my remaining calories and diet preference.` }];
 
-    if (normalizedInput.includes("don't feel like eating") || normalizedInput.includes("dont feel like eating") || normalizedInput.includes("not hungry")) {
-         return { 
-            remaining, 
-            suggestionText: `Yeah, some days are just like that! If you are really not up for it, I'd suggest reducing your calorie goal by a little today and just focusing on staying hydrated.`, 
-            customFoods: [], 
-            promptForInput: true 
-         };
-    }
+    const completion = await groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages: [{ role: "system", content: systemPrompt }, ...messages],
+        max_tokens: 150,
+        temperature: 0.7,
+    });
 
-    if (normalizedInput.includes("uneasy") || normalizedInput.includes("emotional") || normalizedInput.includes("sad")) {
-        const favorite = await prisma.customFood.findFirst({
-            where: { userId: user.id, isFavorite: true },
-        });
-        
-        if (favorite) {
-            return {
-                remaining,
-                suggestionText: `If you feel physically uneasy, you should consider seeing a doctor. But if it's just emotional, sometimes your favorite dish helps! How about we log some ${favorite.name}?`,
-                customFoods: [favorite],
-                promptForInput: true
-            };
-        } else {
-            return {
-                remaining,
-                suggestionText: `If you feel physically uneasy, you should consider seeing a doctor. But if it's just emotional, sometimes eating something you love helps. Why not mark a favorite dish using the custom food page?`,
-                customFoods: [],
-                promptForInput: true
-            };
-        }
-    }
+    const suggestionText = completion.choices[0]?.message?.content || "I couldn't generate a suggestion right now. Try again!";
 
-    // Attempt to parse out food and auto log it
-    const analysis = await analyzeMeal(userInput);
-    
-    if (analysis.success && analysis.data && analysis.data.length > 0) {
-         const logDate = new Date();
-         let type = "Breakfast";
-         const hasTime = userInput.match(/(?:at|around)\s+(\d+(?::\d+)?\s*(?:am|pm)?)/i);
-         let timeMessage = "I am autologging this. You can correct the timing, meal type, or delete it in your history if needed.";
-         
-         if (hasTime) {
-             const timeRaw = hasTime[1].toLowerCase();
-             let hours = parseInt(timeRaw);
-             const isPm = timeRaw.includes("pm");
-             const isAm = timeRaw.includes("am");
-             
-             if (isPm && hours < 12) hours += 12;
-             if (isAm && hours === 12) hours = 0;
-             let minutes = 0;
-             if (timeRaw.includes(':')) minutes = parseInt(timeRaw.split(':')[1]);
-             
-             logDate.setHours(hours, minutes, 0, 0);
-             timeMessage = `I logged this for ${hasTime[1]}. You can correct the timing if needed.`;
-             
-             if (hours >= 12 && hours < 17) type = "Lunch";
-             else if (hours >= 17) type = "Dinner";
-         }
-
-         await prisma.mealLog.create({
-             data: {
-                 userId: user.id,
-                 type: type,
-                 date: logDate,
-                 items: {
-                     create: analysis.data.map(item => ({
-                         name: item.name,
-                         calories: item.nutrition.calories,
-                         protein: item.nutrition.protein_g,
-                         carbs: item.nutrition.carbohydrates_total_g,
-                         fat: item.nutrition.fat_total_g,
-                         servingSizeG: item.serving_size_g,
-                     }))
-                 }
-             }
-         });
-
-         const addedCalories = analysis.data.reduce((sum, item) => sum + item.nutrition.calories, 0);
-         remaining = Math.max(0, remaining - addedCalories);
-         
-         return {
-             remaining,
-             suggestionText: `Great! I automatically logged: ${analysis.data.map(d=>d.name).join(", ")}. ${timeMessage} You have ${remaining} calories remaining!`,
-             customFoods: [],
-             promptForInput: true
-         };
-    } else {
-        return {
-             remaining,
-             suggestionText: "I couldn't quite catch what you ate. Could you describe your food more clearly, or reply with how hungry you are?",
-             customFoods: [],
-             promptForInput: true
-        };
-    }
+    return {
+        remaining,
+        suggestionText,
+        customFoods: customFoods.map(f => ({ ...f, createdAt: f.createdAt.toISOString() })),
+        promptForInput: true
+    };
 }

@@ -1,6 +1,8 @@
 import { NutritionProvider } from "./types";
 import { MockNutritionProvider } from "./providers/mock";
 import { CalorieNinjasProvider } from "./providers/calorieNinjas";
+import { LocalSqliteProvider } from "./providers/localSqlite";
+import { HybridNutritionProvider } from "./providers/hybrid";
 
 // Environment variable to determine which provider to use
 // Potential values: "API" (Option A), "LOCAL" (Option B), or "MOCK" (Development)
@@ -11,8 +13,10 @@ export function getNutritionProvider(): NutritionProvider {
     case "API":
       return new CalorieNinjasProvider();
     case "LOCAL":
-      // return new LocalSqliteProvider();
-      throw new Error("Local SQLite Provider not yet implemented");
+      return new LocalSqliteProvider();
+    case "HYBRID":
+      return new HybridNutritionProvider();
+
     case "MOCK":
     default:
       return new MockNutritionProvider();

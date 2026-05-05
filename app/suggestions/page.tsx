@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { processSuggestionChat } from "./actions";
+import { logCustomFood } from "../custom-food/actions";
 
 type SuggestionData = Awaited<ReturnType<typeof processSuggestionChat>>;
 
@@ -44,6 +45,27 @@ export default function SuggestionsPage() {
             setMessages(prev => [...prev, { role: 'ai', content: "Sorry, I had an error processing that." }]);
         } finally {
             setChatting(false);
+        }
+    };
+    
+    const handleLogFood = async (foodId: string) => {
+        try {
+            const hour = new Date().getHours();
+            let mealType = "Breakfast";
+            if (hour >= 11 && hour < 16) mealType = "Lunch";
+            else if (hour >= 16 && hour < 22) mealType = "Dinner";
+            else if (hour >= 22 || hour < 5) mealType = "Snack";
+            
+            await logCustomFood(foodId, mealType);
+            alert("Logged!");
+            
+            // Refresh the data to update remaining calories
+            const timeStr = `${new Date().getHours()}:${new Date().getMinutes()}`;
+            const res = await processSuggestionChat(undefined, timeStr);
+            setData(res);
+        } catch (e) {
+            console.error(e);
+            alert("Failed to log food");
         }
     };
 
@@ -100,9 +122,12 @@ export default function SuggestionsPage() {
                                             <p className="font-bold text-gray-900">{food.name}</p>
                                             <p className="text-xs text-gray-500">{food.calories} kcal</p>
                                         </div>
-                                        <Link href="/custom-food" className="px-4 py-2 bg-blue-100 text-blue-700 font-bold text-sm rounded-lg hover:bg-blue-200 transition-colors">
+                                        <button 
+                                            onClick={() => handleLogFood(food.id)}
+                                            className="px-4 py-2 bg-blue-100 text-blue-700 font-bold text-sm rounded-lg hover:bg-blue-200 transition-colors"
+                                        >
                                             Log it
-                                        </Link>
+                                        </button>
                                     </div>
                                 ))}
                             </div>

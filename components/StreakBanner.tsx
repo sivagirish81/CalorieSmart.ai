@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import confetti from "canvas-confetti";
 
-export default function StreakBanner({ achieved }: { achieved: boolean }) {
+export default function StreakBanner({ streak }: { streak: number }) {
     const triggerConfetti = () => {
         const duration = 3 * 1000;
         const end = Date.now() + duration;
@@ -32,27 +32,26 @@ export default function StreakBanner({ achieved }: { achieved: boolean }) {
     };
 
     useEffect(() => {
-        if (achieved) {
+        if (streak > 0) {
             const todayStr = new Date().toISOString().split("T")[0];
             const lastFired = localStorage.getItem("lastConfettiFired");
             
             if (lastFired !== todayStr) {
-                // First time today achieving this
                 triggerConfetti();
                 localStorage.setItem("lastConfettiFired", todayStr);
             }
         }
-    }, [achieved]);
+    }, [streak]);
 
-    if (!achieved) return null;
+    if (streak <= 0) return null;
 
     return (
         <div className="bg-amber-100 border border-amber-200 text-amber-900 px-5 py-4 rounded-3xl flex justify-between items-center shadow-sm">
             <div>
                 <p className="font-black text-sm uppercase tracking-wide flex items-center gap-2">
-                    <span>🔥</span> Streak Active!
+                    <span>🔥</span> {streak}-Day Streak!
                 </p>
-                <p className="text-xs font-medium mt-1 opacity-80">You are doing a fantastic job meeting your calorie goals for 3+ consecutive days.</p>
+                <p className="text-xs font-medium mt-1 opacity-80">You are doing a fantastic job meeting your calorie goals consecutively.</p>
             </div>
             <button 
                 onClick={triggerConfetti} 

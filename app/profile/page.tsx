@@ -8,9 +8,15 @@ export default function Profile() {
     const [name, setName] = useState("");
     const [calorieBound, setCalorieBound] = useState(2000);
     const [dietaryPreference, setDietaryPreference] = useState("Omnivore");
+    const [proteinGoalG, setProteinGoalG] = useState(150);
+    const [carbsGoalG, setCarbsGoalG] = useState(200);
+    const [fatGoalG, setFatGoalG] = useState(65);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
+
+    const [startWeight, setStartWeight] = useState<number | null>(null);
+    const [currentWeight, setCurrentWeight] = useState<number | null>(null);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -18,6 +24,18 @@ export default function Profile() {
             setName(profile.name || "");
             setCalorieBound(profile.calorieBound);
             setDietaryPreference(profile.dietaryPreference);
+            if (profile.proteinGoalG) setProteinGoalG(profile.proteinGoalG);
+            if (profile.carbsGoalG) setCarbsGoalG(profile.carbsGoalG);
+            if (profile.fatGoalG) setFatGoalG(profile.fatGoalG);
+            
+            if (profile.weightLogs && profile.weightLogs.length > 0) {
+                setStartWeight(profile.weightLogs[0].weightKg);
+                setCurrentWeight(profile.weightLogs[profile.weightLogs.length - 1].weightKg);
+            } else if (profile.weightKg) {
+                setStartWeight(profile.weightKg);
+                setCurrentWeight(profile.weightKg);
+            }
+            
             setIsLoading(false);
         };
         fetchProfile();
@@ -26,7 +44,14 @@ export default function Profile() {
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
-        const res = await updateProfile({ name, calorieBound, dietaryPreference });
+        const res = await updateProfile({ 
+            name, 
+            calorieBound, 
+            dietaryPreference,
+            proteinGoalG,
+            carbsGoalG,
+            fatGoalG
+        });
         setIsSaving(false);
         if (res.success) {
             setSaveSuccess(true);
@@ -52,7 +77,24 @@ export default function Profile() {
                 <h1 className="text-2xl font-bold text-gray-900">Dietary Profile</h1>
             </header>
 
-            <form onSubmit={handleSave} className="space-y-6 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+            {currentWeight && startWeight && (
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex justify-between items-center">
+                    <div>
+                        <p className="text-sm font-semibold text-gray-500">Weight Trend</p>
+                        <p className="text-2xl font-bold text-gray-900">{currentWeight} kg</p>
+                    </div>
+                    <div className="text-right">
+                        {currentWeight !== startWeight && (
+                            <span className="text-lg font-bold text-gray-400 line-through mr-2">{startWeight} kg</span>
+                        )}
+                        <span className={`text-3xl font-black ${currentWeight < startWeight ? 'text-green-500' : currentWeight > startWeight ? 'text-red-500' : 'text-gray-500'}`}>
+                            {currentWeight < startWeight ? '↓' : currentWeight > startWeight ? '↑' : '→'}
+                        </span>
+                    </div>
+                </div>
+            )}
+
+            <form onSubmit={handleSave} className="space-y-6 bg-white p-6 rounded-3xl shadow-sm border border-gray-100 pb-10">
                 <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-700">Display Name</label>
                     <input
@@ -75,6 +117,39 @@ export default function Profile() {
                         max="10000"
                         required
                     />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700">Protein (g)</label>
+                        <input
+                            type="number"
+                            value={proteinGoalG}
+                            onChange={(e) => setProteinGoalG(Number(e.target.value))}
+                            className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 shadow-inner"
+                            required
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700">Carbs (g)</label>
+                        <input
+                            type="number"
+                            value={carbsGoalG}
+                            onChange={(e) => setCarbsGoalG(Number(e.target.value))}
+                            className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 shadow-inner"
+                            required
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700">Fat (g)</label>
+                        <input
+                            type="number"
+                            value={fatGoalG}
+                            onChange={(e) => setFatGoalG(Number(e.target.value))}
+                            className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 shadow-inner"
+                            required
+                        />
+                    </div>
                 </div>
 
                 <div className="space-y-2">

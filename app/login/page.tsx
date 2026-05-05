@@ -18,7 +18,7 @@ export default function Login() {
           <p className="text-gray-500 font-medium text-sm">Sign in to your nutrition portfolio</p>
         </div>
 
-        <form action={formAction} className="space-y-5 pt-4">
+        <form action={formAction} className="space-y-5 pt-4" suppressHydrationWarning>
           <div className="space-y-2">
             <label className="text-sm font-bold text-gray-700">Email Address</label>
             <input
@@ -26,6 +26,7 @@ export default function Login() {
               name="email"
               placeholder="student@university.edu"
               required
+              suppressHydrationWarning
               className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 shadow-inner transition-colors focus:bg-white"
             />
           </div>
@@ -37,6 +38,7 @@ export default function Login() {
               name="password"
               placeholder="••••••••"
               required
+              suppressHydrationWarning
               className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 shadow-inner transition-colors focus:bg-white"
             />
           </div>
