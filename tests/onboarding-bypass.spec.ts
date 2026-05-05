@@ -6,7 +6,6 @@ test('Security test: Prevent onboarding bypass', async ({ page }) => {
 
   // 2. Fill out signup form
   const uniqueEmail = `hacker_${Date.now()}@example.com`;
-  await page.fill('input[name="name"]', 'Hacker');
   await page.fill('input[type="email"]', uniqueEmail);
   await page.fill('input[type="password"]', 'password123');
   await page.click('button[type="submit"]');
