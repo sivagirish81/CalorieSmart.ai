@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { saveMealLog } from "@/app/search/actions";
 import { ParsedFoodItem } from "@/lib/nutrition/types";
+import type { BrowserMultiFormatReader } from "@zxing/library";
 
 type OFFProduct = {
     product_name: string;
@@ -38,7 +39,7 @@ export default function BarcodePage() {
         readerRef.current = reader;
 
         try {
-            await reader.decodeFromVideoDevice(undefined, videoRef.current!, async (result, err) => {
+            await reader.decodeFromVideoDevice(null, videoRef.current!, async (result, err) => {
                 if (result) {
                     const code = result.getText();
                     reader.reset();
