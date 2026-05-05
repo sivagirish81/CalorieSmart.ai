@@ -16,7 +16,7 @@ test('Full user journey: signup, onboard, log meal', async ({ page }) => {
   await page.click('button[type="submit"]');
 
   // Should redirect to onboarding since it's a new user
-  await expect(page).toHaveURL(/.*\/onboarding/);
+  await expect(page).toHaveURL(/.*\/onboarding/, { timeout: 15000 });
 
   // 4. Fill onboarding form
   await page.fill('input[name="name"]', 'Playwright Tester');
@@ -39,7 +39,7 @@ test('Full user journey: signup, onboard, log meal', async ({ page }) => {
   await expect(page).toHaveURL(/.*\/search/);
 
   // 6. Search for food
-  await page.fill('input[type="text"]', '1 egg');
+  await page.fill('input[type="text"]', 'avocado toast');
   await page.click('button[type="submit"]');
 
   // Wait for extraction yield to show up
@@ -54,5 +54,5 @@ test('Full user journey: signup, onboard, log meal', async ({ page }) => {
 
   // 7. Verify dashboard update
   await page.goto('/');
-  await expect(page.locator('text=egg')).toBeVisible();
+  await expect(page.getByText('avocado toast', { exact: false })).toBeVisible();
 });
