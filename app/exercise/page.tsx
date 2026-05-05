@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { logExercise, getTodaysExercises, deleteExercise, updateExercise } from "./actions";
 
@@ -77,12 +77,12 @@ export default function ExercisePage() {
     const [logs, setLogs] = useState<ExerciseLog[]>([]);
     const [editingId, setEditingId] = useState<string | null>(null);
 
-    const fetchLogs = async () => {
+    const fetchLogs = useCallback(async () => {
         const data = await getTodaysExercises();
         setLogs(data as ExerciseLog[]);
-    };
+    }, []);
 
-    useEffect(() => { fetchLogs(); }, []);
+    useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
     const handleLog = async (e: React.FormEvent) => {
         e.preventDefault();
