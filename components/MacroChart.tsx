@@ -20,7 +20,7 @@ export default function MacroChart({ protein, carbs, fat }: { protein: number, c
 
     return (
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-600 mb-2">Today&apos;s Macro Split</h2>
+            <h2 className="text-sm font-semibold text-gray-600 mb-2">7-Day Avg Macro Split</h2>
             <div className="w-full flex items-center justify-between">
                 <div className="w-1/2 h-40">
                     <ResponsiveContainer width="100%" height="100%">

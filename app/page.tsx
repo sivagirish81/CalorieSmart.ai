@@ -82,6 +82,23 @@ export default async function Dashboard() {
       });
   }
 
+  // Compute weekly average macros from streakMeals (past 7 days)
+  let weeklyProtein = 0, weeklyCarbs = 0, weeklyFat = 0;
+  const loggedDays = new Set<string>();
+  streakMeals.forEach((log: { date: Date; items: Array<{ protein: number | null; carbs: number | null; fat: number | null; calories: number }> }) => {
+    const dateStr = log.date.toLocaleDateString("en-US", { timeZone: user.timezone });
+    log.items.forEach((item) => {
+      weeklyProtein += item.protein || 0;
+      weeklyCarbs   += item.carbs   || 0;
+      weeklyFat     += item.fat     || 0;
+      if (item.calories > 0) loggedDays.add(dateStr);
+    });
+  });
+  const daysWithData = Math.max(loggedDays.size, 1);
+  const avgProtein = Math.round(weeklyProtein / daysWithData);
+  const avgCarbs   = Math.round(weeklyCarbs   / daysWithData);
+  const avgFat     = Math.round(weeklyFat     / daysWithData);
+
   // Calculate consumed calories & prepare recent meals list
   let consumed = 0;
   let totalProtein = 0;
@@ -225,8 +242,8 @@ export default async function Dashboard() {
         )}
       </div>
 
-      {/* Macro Split Chart */}
-      <MacroChart protein={totalProtein} carbs={totalCarbs} fat={totalFat} />
+      {/* Macro Split Chart — 7-day weekly average */}
+      <MacroChart protein={avgProtein} carbs={avgCarbs} fat={avgFat} />
 
       {/* Quick Actions & Water */}
       <div className="space-y-4">
