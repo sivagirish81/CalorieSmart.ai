@@ -51,3 +51,12 @@ generate_ppt.js
 
 playwright-report/
 test-results/
+
+# Dev-only scripts
+test_local.ts
+seed.js
+features_summary.md
+prisma/fix-streak.ts
+prisma/seed-recent.ts
+prisma/seed-thursday.ts
+prisma/seed-demo.ts

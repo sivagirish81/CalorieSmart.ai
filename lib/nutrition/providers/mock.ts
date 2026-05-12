@@ -4,10 +4,8 @@ export class MockNutritionProvider implements NutritionProvider {
   async parseNaturalLanguage(query: string): Promise<ParsedFoodItem[]> {
     console.log(`[MockNutritionProvider] Parsing query: "${query}"`);
     
-    // Simulate slight network latency to test UI loading states
     await new Promise((resolve) => setTimeout(resolve, 800));
 
-    // Return hardcoded mock data for now
     return [
       {
         name: "avocado toast",

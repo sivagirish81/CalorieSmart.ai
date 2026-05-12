@@ -6,25 +6,28 @@ import StreakBanner from "@/components/StreakBanner";
 import WeeklyChart from "@/components/WeeklyChart";
 import MacroChart from "@/components/MacroChart";
 import { getDayBounds } from "@/lib/time";
-// Ensure this page always fetches fresh data on load
+import { updateStreak } from "@/lib/streak";
 export const dynamic = "force-dynamic";
 
-export default async function Dashboard() {
+export default async function Dashboard({ searchParams }: { searchParams: Promise<{ login?: string }> }) {
   const session = await auth();
   if (!session?.user?.email) redirect("/login");
+  const { login } = await searchParams;
+  const freshLogin = login === "1";
 
   const user = await prisma.user.findUnique({
     where: { email: session.user.email }
   });
   if (!user) redirect("/login");
 
-  // STRICT PHASE 2 REQUIREMENT: Mandatory Onboarding Pipeline
   if (!user.onboardingComplete) redirect("/onboarding");
 
-  // Calculate today's boundaries
+  await updateStreak(user.id);
+
+  const freshUser = await prisma.user.findUnique({ where: { id: user.id } });
+
   const { startOfDay, endOfDay } = getDayBounds(user.timezone);
 
-  // Fetch today's meal logs
   const todaysMeals = await prisma.mealLog.findMany({
     where: {
       userId: user.id,
@@ -34,7 +37,7 @@ export default async function Dashboard() {
       }
     },
     include: {
-      items: true 
+      items: true
     },
     orderBy: {
       date: 'desc'
@@ -52,7 +55,6 @@ export default async function Dashboard() {
   });
   const exerciseBurned = todaysExercise.reduce((sum, log) => sum + log.caloriesBurned, 0);
 
-  // Fetch past 7 days for Chart
   const d7 = new Date();
   d7.setDate(d7.getDate() - 6);
   const { startOfDay: sevenDaysAgo } = getDayBounds(user.timezone, d7);
@@ -69,7 +71,6 @@ export default async function Dashboard() {
       log.items.forEach((item: { calories: number }) => { dailyTotals[dateStr] += item.calories; });
   });
 
-  // Prepare chart data for the past 7 days
   const chartData = [];
   for (let i = 6; i >= 0; i--) {
       const d = new Date();
@@ -96,8 +97,7 @@ export default async function Dashboard() {
       totalProtein += item.protein || 0;
       totalCarbs += item.carbs || 0;
       totalFat += item.fat || 0;
-      
-      // Push each item into our recent meals display
+
       formattedMeals.push({
         name: item.name,
         time: log.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -109,7 +109,7 @@ export default async function Dashboard() {
   }
 
   const limit = user.calorieBound;
-  const netCalories = consumed - exerciseBurned; // can be negative if burned > eaten
+  const netCalories = consumed - exerciseBurned;
   const remaining = Math.max(0, limit - netCalories);
   const percentage = Math.min(100, Math.max(0, (netCalories / limit) * 100));
 
@@ -126,7 +126,6 @@ export default async function Dashboard() {
       nickname = "Keto Ninja 🥑";
   }
 
-  // Get current hour in user's local timezone for fun warnings
   const currentHour = parseInt(new Date().toLocaleString("en-US", { hour: "numeric", hour12: false, timeZone: user.timezone }));
   let funWarning = null;
   if (netCalories > limit) {
@@ -141,7 +140,7 @@ export default async function Dashboard() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <StreakBanner streak={user.currentStreak} />
+      <StreakBanner streak={freshUser?.currentStreak ?? user.currentStreak} freshLogin={freshLogin} />
       
       {funWarning && (
          <div className="bg-red-50 border border-red-200 p-4 rounded-2xl text-red-700 font-bold text-sm shadow-sm animate-pulse flex items-center gap-3">

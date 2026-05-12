@@ -19,7 +19,7 @@ export async function deleteMealLog(id: string) {
     return { success: true };
 }
 
-export async function updateFoodItem(id: string, patch: { name?: string; calories?: number; protein?: number; carbs?: number; fat?: number }) {
+export async function updateFoodItem(id: string, patch: { name?: string; calories?: number; servingSizeG?: number; protein?: number; carbs?: number; fat?: number }) {
     const session = await auth();
     if (!session?.user?.email) throw new Error("Unauthorized");
     

@@ -21,12 +21,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           where: { email },
         });
 
-        // Fail login if the user doesn't exist (no more auto-registering)
         if (!user) {
           return null;
         }
 
-        // Securely check password
         const isValid = await bcrypt.compare(password, user.password);
         if (!isValid) return null;
 
@@ -46,5 +44,5 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return session;
     }
   },
-  secret: process.env.NEXTAUTH_SECRET || "calorie_smart_university_project_secret_key",
+  secret: process.env.NEXTAUTH_SECRET,
 });

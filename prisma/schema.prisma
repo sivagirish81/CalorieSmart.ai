@@ -13,27 +13,22 @@ model User {
   password         String
   name             String?
   calorieBound     Int       @default(2000)
-  dietaryPreference String   @default("Omnivore") // Omnivore, Vegetarian, Vegan, Keto
+  dietaryPreference String   @default("Omnivore")
   onboardingComplete Boolean @default(false)
   
-  // TDEE & Demographics
   age              Int?
   heightCm         Float?
   weightKg         Float?
   gender           String?
   activityLevel    String?
-  
-  // Macro Targets
+
   proteinGoalG     Int?
   carbsGoalG       Int?
   fatGoalG         Int?
-  
-  // Streaks & Time
+
   currentStreak    Int       @default(0)
   lastStreakDate   DateTime?
   timezone         String    @default("UTC")
-
-  // New Goals
   waterGoalMl      Int       @default(2000)
 
   mealLogs         MealLog[]
@@ -49,7 +44,7 @@ model MealLog {
   id          String     @id @default(cuid())
   userId      String
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type        String     // Breakfast, Lunch, Dinner, Snack
+  type        String
   date        DateTime   @default(now())
   items       FoodItem[]
 }

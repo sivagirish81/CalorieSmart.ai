@@ -15,9 +15,8 @@ export async function logExercise(input: string) {
     const user = await prisma.user.findUnique({ where: { email: session.user.email }});
     if (!user) throw new Error("User missing");
 
-    const weightKg = user.weightKg || 70; // fallback to 70kg if not set
+    const weightKg = user.weightKg || 70;
 
-    // Use Groq to parse the exercise description
     const completion = await groq.chat.completions.create({
         model: "llama-3.3-70b-versatile",
         messages: [
@@ -28,15 +27,28 @@ export async function logExercise(input: string) {
 User weight: ${weightKg}kg
 Formula: calories = MET × weight_kg × duration_hours
 
-MET values: running=9.8, jogging=7, walking=3.5, cycling=7.5, swimming=8, HIIT=10, yoga=3, weightlifting=5, dancing=6, CrossFit=10, basketball=8, tennis=7, hiking=6, elliptical=5, rowing=7, pilates=3.5.
+MET values: running=9.8, jogging=7, walking=3.5, cycling=7.5, swimming=8, HIIT=10, yoga=3, weightlifting=5, dancing=6, CrossFit=10, basketball=8, tennis=7, hiking=6, elliptical=5, rowing=7, pilates=3.5, stair_climbing=4, push_ups=3.8, pull_ups=5, sit_ups=3.5, burpees=8, jumping_jacks=6.
 
-If given distance instead of time, estimate duration using typical pace (running ~6 min/km, walking ~12 min/km, cycling ~3 min/km).
+Distance → duration: running ~6 min/km, walking ~12 min/km, cycling ~3 min/km.
+
+Count-based → estimated duration (always give a best estimate, never error on these):
+- Stairs/steps: 1 flight (~12 steps) ≈ 1 min at MET 4. "20 steps" ≈ 2 min.
+- Push-ups: every 10 reps ≈ 1 min at MET 3.8
+- Pull-ups: every 5 reps ≈ 1 min at MET 5
+- Sit-ups / crunches: every 15 reps ≈ 1 min at MET 3.5
+- Burpees: every 5 reps ≈ 1 min at MET 8
+- Jumping jacks: every 20 reps ≈ 1 min at MET 6
+- Walking steps (pedometer): 1000 steps ≈ 10 min walking at MET 3.5
+- Laps (pool): 1 lap (50m) ≈ 2 min swimming at MET 8
+- Laps (track): 1 lap (400m) ≈ 3 min jogging at MET 7
+
+IMPORTANT: Always return a valid result. Even if the input is vague or count-based, make a reasonable best estimate. Only return an error if the input is completely unrelated to physical activity.
 
 Output format (JSON only):
-{"activityName":"Running","durationMin":30,"caloriesBurned":245}
+{"activityName":"Stair Climbing","durationMin":2,"caloriesBurned":9}
 
-If activity or duration cannot be determined:
-{"error":"Please describe what you did and for how long, e.g. ran for 30 minutes."}`
+Only if input is completely unrelated to exercise:
+{"error":"Please describe a physical activity, e.g. 'ran 30 min', 'climbed 3 flights of stairs', '50 push-ups'."}`
             },
             {
                 role: "user",
@@ -55,7 +67,7 @@ If activity or duration cannot be determined:
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
         console.error("[Exercise AI] No JSON found in response:", raw);
-        return { success: false, error: "AI could not parse your exercise. Try: 'ran 30 minutes' or 'swam for 1 hour'." };
+        return { success: false, error: "AI could not parse your exercise. Try: 'ran 30 min', '50 push-ups', 'climbed 3 flights of stairs'." };
     }
 
     let parsed: { activityName?: string; durationMin?: number; caloriesBurned?: number; error?: string };
