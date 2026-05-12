@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 
 export async function analyzePhoto(base64Image: string, mimeType: string) {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "dummy_key");
-    const model = genAI.getGenerativeModel({ model: "models/gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `Analyze this food image. For each food item you see, estimate the nutrition.
 Return ONLY valid JSON in this exact format, no markdown, no explanation:
@@ -30,7 +30,6 @@ Return ONLY valid JSON in this exact format, no markdown, no explanation:
     ]);
 
     const text = result.response.text().trim();
-    // Strip markdown code fences if Gemini wraps the JSON
     const cleaned = text.replace(/^```json\n?/, "").replace(/\n?```$/, "").trim();
     const parsed = JSON.parse(cleaned);
     return parsed.items as Array<{

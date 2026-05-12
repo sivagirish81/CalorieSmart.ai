@@ -14,7 +14,17 @@ type OFFProduct = {
         carbohydrates_100g?: number;
         fat_100g?: number;
     };
+    serving_size?: string;
 };
+
+function toTodayStr() {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+function toNowTime() {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+}
 
 export default function BarcodePage() {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -26,12 +36,21 @@ export default function BarcodePage() {
     const [error, setError] = useState("");
     const [saved, setSaved] = useState(false);
     const [mealType, setMealType] = useState("Lunch");
+    const [servingG, setServingG] = useState(100);
+    const [overrideDate, setOverrideDate] = useState(toTodayStr());
+    const [overrideTime, setOverrideTime] = useState(toNowTime());
+
+    useEffect(() => {
+        setOverrideTime(toNowTime());
+        return () => { readerRef.current?.reset(); };
+    }, []);
 
     const startScanner = async () => {
         setError("");
         setProduct(null);
         setScannedCode("");
         setSaved(false);
+        setServingG(100);
         setScanning(true);
 
         const { BrowserMultiFormatReader } = await import("@zxing/library");
@@ -62,12 +81,19 @@ export default function BarcodePage() {
     const lookupBarcode = async (code: string) => {
         setLoading(true);
         try {
+            // Try Open Food Facts first
             const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
             const data = await res.json();
             if (data.status === 1 && data.product) {
                 setProduct(data.product);
+                // Auto-set serving size from product if available
+                const servingSizeStr = data.product.serving_size as string | undefined;
+                if (servingSizeStr) {
+                    const match = servingSizeStr.match(/(\d+(?:\.\d+)?)\s*g/i);
+                    if (match) setServingG(parseFloat(match[1]));
+                }
             } else {
-                setError("Product not found in database. Try another item.");
+                setError("Product not found in Open Food Facts database. Try scanning again or search by name.");
             }
         } catch {
             setError("Network error looking up product.");
@@ -79,27 +105,35 @@ export default function BarcodePage() {
     const handleSave = async () => {
         if (!product) return;
         const n = product.nutriments;
+        const ratio = servingG / 100;
         const item: ParsedFoodItem = {
             name: product.product_name || "Scanned Product",
-            serving_size_g: 100,
+            serving_size_g: servingG,
             nutrition: {
-                calories: n["energy-kcal_100g"] || 0,
-                protein_g: n.proteins_100g || 0,
-                carbohydrates_total_g: n.carbohydrates_100g || 0,
-                fat_total_g: n.fat_100g || 0,
+                calories: Math.round((n["energy-kcal_100g"] || 0) * ratio),
+                protein_g: Math.round((n.proteins_100g || 0) * ratio * 10) / 10,
+                carbohydrates_total_g: Math.round((n.carbohydrates_100g || 0) * ratio * 10) / 10,
+                fat_total_g: Math.round((n.fat_100g || 0) * ratio * 10) / 10,
             }
         };
         try {
-            await saveMealLog([item], mealType);
+            const finalDate = overrideDate || undefined;
+            const finalTime = overrideTime || undefined;
+            await saveMealLog([item], mealType, finalDate, finalTime);
             setSaved(true);
         } catch {
             setError("Failed to save to your log. Please try again.");
         }
     };
 
-    useEffect(() => {
-        return () => { readerRef.current?.reset(); };
-    }, []);
+    // Computed scaled values for display
+    const ratio = servingG / 100;
+    const scaledNutrition = product ? {
+        calories: Math.round((product.nutriments["energy-kcal_100g"] || 0) * ratio),
+        protein: Math.round((product.nutriments.proteins_100g || 0) * ratio * 10) / 10,
+        carbs: Math.round((product.nutriments.carbohydrates_100g || 0) * ratio * 10) / 10,
+        fat: Math.round((product.nutriments.fat_100g || 0) * ratio * 10) / 10,
+    } : null;
 
     return (
         <main className="min-h-screen bg-gray-50 pb-24">
@@ -118,7 +152,6 @@ export default function BarcodePage() {
                     <video ref={videoRef} className="w-full h-full object-cover" />
                     {scanning && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            {/* Targeting reticle */}
                             <div className="w-56 h-32 border-2 border-white rounded-xl relative">
                                 <div className="absolute top-0 left-0 w-5 h-5 border-t-4 border-l-4 border-blue-400 rounded-tl-lg -translate-x-0.5 -translate-y-0.5" />
                                 <div className="absolute top-0 right-0 w-5 h-5 border-t-4 border-r-4 border-blue-400 rounded-tr-lg translate-x-0.5 -translate-y-0.5" />
@@ -163,17 +196,46 @@ export default function BarcodePage() {
 
                 {error && <p className="text-red-600 text-sm font-semibold text-center bg-red-50 p-3 rounded-xl">{error}</p>}
 
-                {product && (
+                {product && scaledNutrition && (
                     <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 space-y-4">
                         <h2 className="font-black text-xl text-gray-900">{product.product_name}</h2>
-                        <p className="text-xs text-gray-400 font-medium">Nutrition per 100g · Barcode: {scannedCode}</p>
+                        <p className="text-xs text-gray-400 font-medium">Barcode: {scannedCode} · Open Food Facts database</p>
 
+                        {/* Serving size scaler */}
+                        <div className="bg-blue-50 rounded-2xl p-4 space-y-2">
+                            <div className="flex justify-between items-center">
+                                <label className="text-sm font-bold text-blue-800">Serving Size</label>
+                                <span className="text-xs text-blue-500 font-medium">Base values per 100g</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="range"
+                                    min={10}
+                                    max={500}
+                                    step={5}
+                                    value={servingG}
+                                    onChange={e => setServingG(parseFloat(e.target.value))}
+                                    className="flex-1 accent-blue-600"
+                                />
+                                <div className="flex items-center gap-1 bg-white border border-blue-200 rounded-xl px-3 py-2">
+                                    <input
+                                        type="number"
+                                        value={servingG}
+                                        onChange={e => setServingG(Math.max(1, parseFloat(e.target.value) || 1))}
+                                        className="w-14 text-right font-black text-gray-900 focus:outline-none"
+                                    />
+                                    <span className="text-xs text-gray-400 font-bold">g</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Scaled nutrition */}
                         <div className="grid grid-cols-2 gap-3">
                             {[
-                                { label: "Calories", val: `${product.nutriments["energy-kcal_100g"] || 0} kcal`, color: "bg-orange-50 text-orange-800" },
-                                { label: "Protein", val: `${product.nutriments.proteins_100g || 0}g`, color: "bg-blue-50 text-blue-800" },
-                                { label: "Carbs", val: `${product.nutriments.carbohydrates_100g || 0}g`, color: "bg-yellow-50 text-yellow-800" },
-                                { label: "Fat", val: `${product.nutriments.fat_100g || 0}g`, color: "bg-red-50 text-red-800" },
+                                { label: "Calories", val: `${scaledNutrition.calories} kcal`, color: "bg-orange-50 text-orange-800" },
+                                { label: "Protein", val: `${scaledNutrition.protein}g`, color: "bg-blue-50 text-blue-800" },
+                                { label: "Carbs", val: `${scaledNutrition.carbs}g`, color: "bg-yellow-50 text-yellow-800" },
+                                { label: "Fat", val: `${scaledNutrition.fat}g`, color: "bg-red-50 text-red-800" },
                             ].map(({ label, val, color }) => (
                                 <div key={label} className={`${color} rounded-2xl p-4`}>
                                     <p className="text-xs font-bold uppercase tracking-wide opacity-70">{label}</p>
@@ -182,18 +244,41 @@ export default function BarcodePage() {
                             ))}
                         </div>
 
-                        <div className="space-y-2 pt-2">
-                            <label className="text-sm font-bold text-gray-700">Meal Type</label>
-                            <select
-                                value={mealType}
-                                onChange={e => setMealType(e.target.value)}
-                                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
-                            >
-                                <option>Breakfast</option>
-                                <option>Lunch</option>
-                                <option>Dinner</option>
-                                <option>Snack</option>
-                            </select>
+                        {/* Meal type + date/time */}
+                        <div className="space-y-3">
+                            <div className="space-y-1">
+                                <label className="text-sm font-bold text-gray-700">Meal Type</label>
+                                <select
+                                    value={mealType}
+                                    onChange={e => setMealType(e.target.value)}
+                                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                                >
+                                    <option>Breakfast</option>
+                                    <option>Lunch</option>
+                                    <option>Dinner</option>
+                                    <option>Snack</option>
+                                </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <label className="text-sm font-bold text-gray-700">Date</label>
+                                    <input
+                                        type="date"
+                                        value={overrideDate}
+                                        onChange={e => setOverrideDate(e.target.value)}
+                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-sm font-bold text-gray-700">Time</label>
+                                    <input
+                                        type="time"
+                                        value={overrideTime}
+                                        onChange={e => setOverrideTime(e.target.value)}
+                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                                    />
+                                </div>
+                            </div>
                         </div>
 
                         <button
@@ -201,7 +286,7 @@ export default function BarcodePage() {
                             disabled={saved}
                             className={`w-full py-4 font-bold rounded-2xl transition-all ${saved ? "bg-green-500 text-white" : "bg-gray-900 text-white hover:bg-black"}`}
                         >
-                            {saved ? "✓ Logged!" : "Add to Daily Log"}
+                            {saved ? `✓ Logged ${scaledNutrition.calories} kcal!` : `Add ${scaledNutrition.calories} kcal to Daily Log`}
                         </button>
                     </div>
                 )}

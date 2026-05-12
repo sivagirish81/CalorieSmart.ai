@@ -28,7 +28,6 @@ export class CalorieNinjasProvider implements NutritionProvider {
 
     const data = await response.json();
 
-    // Safely map the returned data to our internal ParsedFoodItem interface
     return data.items.map((item: { name: string; calories: number; protein_g: number; carbohydrates_total_g: number; fat_total_g: number; serving_size_g: number; sugar_g: number; fiber_g: number; sodium_mg: number; cholesterol_mg: number }): ParsedFoodItem => ({
       name: item.name,
       serving_size_g: item.serving_size_g,

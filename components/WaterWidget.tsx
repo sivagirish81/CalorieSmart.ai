@@ -15,7 +15,6 @@ export default function WaterWidget({ currentMl, goalMl }: { currentMl: number, 
 
     const handlePointerDown = () => {
         timerRef.current = setTimeout(async () => {
-            // Long press = undo
             if (water >= GLASS_ML) {
                 setWater(w => w - GLASS_ML);
                 setIsUpdating(true);
@@ -23,12 +22,11 @@ export default function WaterWidget({ currentMl, goalMl }: { currentMl: number, 
                 setIsUpdating(false);
             }
             timerRef.current = null;
-        }, 500); // 500ms for long press
+        }, 500);
     };
 
     const handlePointerUp = async () => {
         if (timerRef.current) {
-            // Short press = add
             clearTimeout(timerRef.current);
             timerRef.current = null;
             

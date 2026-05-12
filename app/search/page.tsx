@@ -5,6 +5,7 @@ import { analyzeMeal, saveMealLog } from "./actions";
 import { ParsedFoodItem } from "@/lib/nutrition/types";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import confetti from "canvas-confetti";
 
 interface SearchResult {
     success: boolean;
@@ -26,6 +27,9 @@ export function SearchContent() {
     const [mealType, setMealType] = useState("Lunch");
     const [overrideDate, setOverrideDate] = useState("");
     const [overrideTime, setOverrideTime] = useState("");
+    const [editedData, setEditedData] = useState<ParsedFoodItem[] | null>(null);
+    // Store per-gram base values for proportional serving-size scaling
+    const [baseData, setBaseData] = useState<ParsedFoodItem[] | null>(null);
 
     useEffect(() => {
         const now = new Date();
@@ -56,18 +60,68 @@ export function SearchContent() {
                 const day = String(parsed.getDate()).padStart(2, '0');
                 setOverrideDate(`${year}-${month}-${day}`);
             }
+        } else {
+            // Default to today when no date query param
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            setOverrideDate(`${year}-${month}-${day}`);
         }
     }, [searchParams]);
+
+    const updateItemServing = (idx: number, newServing: number) => {
+        if (!baseData || newServing <= 0) return;
+        const base = baseData[idx];
+        const ratio = newServing / base.serving_size_g;
+        setEditedData(prev => {
+            if (!prev) return prev;
+            const updated = [...prev];
+            updated[idx] = {
+                ...updated[idx],
+                serving_size_g: newServing,
+                nutrition: {
+                    calories: Math.round(base.nutrition.calories * ratio * 10) / 10,
+                    protein_g: Math.round(base.nutrition.protein_g * ratio * 10) / 10,
+                    carbohydrates_total_g: Math.round(base.nutrition.carbohydrates_total_g * ratio * 10) / 10,
+                    fat_total_g: Math.round(base.nutrition.fat_total_g * ratio * 10) / 10,
+                }
+            };
+            return updated;
+        });
+    };
+
+    const updateItemField = (idx: number, field: keyof ParsedFoodItem['nutrition'], value: number) => {
+        setEditedData(prev => {
+            if (!prev) return prev;
+            const updated = [...prev];
+            updated[idx] = { ...updated[idx], nutrition: { ...updated[idx].nutrition, [field]: value } };
+            return updated;
+        });
+    };
 
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setResult(null);
         setSaved(false);
+        setEditedData(null);
+        setBaseData(null);
 
         try {
             const res = await analyzeMeal(query);
             setResult(res);
+            if (res.data) {
+                const deepCopy = res.data.map(item => ({
+                    ...item,
+                    nutrition: { ...item.nutrition }
+                }));
+                setEditedData(deepCopy);
+                setBaseData(res.data.map(item => ({
+                    ...item,
+                    nutrition: { ...item.nutrition }
+                })));
+            }
         } catch {
             setResult({ success: false, error: "Network error occurred." });
         } finally {
@@ -76,14 +130,16 @@ export function SearchContent() {
     };
 
     const handleSave = async () => {
-        if (!result?.data) return;
+        if (!editedData) return;
         setIsSaving(true);
         try {
             const finalDate = overrideDate ? overrideDate : undefined;
             const finalTime = overrideTime ? overrideTime : undefined;
-            const res = await saveMealLog(result.data, mealType, finalDate, finalTime);
+            const res = await saveMealLog(editedData, mealType, finalDate, finalTime);
             if (res.success) {
                 setSaved(true);
+                // Celebrate the log with a quick confetti burst
+                confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 }, colors: ['#2563eb', '#10b981', '#f59e0b'] });
             } else {
                 alert(res.error);
             }
@@ -142,11 +198,11 @@ export function SearchContent() {
                 </div>
 
                 {/* State: Data Rendered */}
-                {result?.success && result.data && (
+                {result?.success && editedData && (
                     <div className="bg-white/60 backdrop-blur-xl rounded-3xl p-5 shadow-lg shadow-blue-900/5 border border-white animate-in slide-in-from-bottom-2 fade-in duration-300">
-                        
-                        {/* Phase 3 Requirement: Source Indicator */}
-                        <div className="flex justify-between items-center mb-6 border-b border-gray-50 pb-4">
+
+                        {/* Source Indicator */}
+                        <div className="flex justify-between items-center mb-4 border-b border-gray-50 pb-4">
                             <h2 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
                                 <span className="bg-green-100 text-green-700 p-1.5 rounded-lg">
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
@@ -154,30 +210,69 @@ export function SearchContent() {
                                 Extraction Yield
                             </h2>
                             <div className="flex flex-col items-end">
-                                <span className="text-3xl font-black text-gray-900 tracking-tighter">{Math.round(result.totalCalories || 0)}</span>
+                                <span className="text-3xl font-black text-gray-900 tracking-tighter">
+                                    {Math.round(editedData.reduce((s, i) => s + i.nutrition.calories, 0))}
+                                </span>
                                 <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">KCAL TOTAL</span>
                             </div>
                         </div>
 
-                        {/* Phase 3 Requirement: Disclaimer Text */}
-                        <div className="bg-yellow-50 border border-yellow-100 text-yellow-800 text-xs py-2 px-3 rounded-lg mb-6 flex items-center gap-2 font-medium">
+                        <div className="bg-yellow-50 border border-yellow-100 text-yellow-800 text-xs py-2 px-3 rounded-lg mb-4 flex items-center gap-2 font-medium">
                             <span className="text-lg">⚠️</span>
-                            Estimated calories. Verify for accuracy.
+                            Estimated — adjust serving size or macros before logging.
                         </div>
 
                         <div className="space-y-4">
-                            {result.data.map((item, index) => (
-                                <div key={index} className="flex justify-between items-center p-4 bg-white/70 backdrop-blur-md rounded-2xl border border-white hover:border-blue-200 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5">
-                                    <div className="overflow-hidden pr-3">
-                                        <p className="font-bold text-gray-900 truncate capitalize tracking-tight">{item.name}</p>
-                                        <p className="text-xs text-gray-500 font-medium">{item.serving_size_g}g serving</p>
+                            {editedData.map((item, index) => (
+                                <div key={index} className="p-4 bg-white/70 backdrop-blur-md rounded-2xl border border-white hover:border-blue-200 transition-all shadow-sm">
+                                    <div className="flex justify-between items-start mb-3">
+                                        <p className="font-bold text-gray-900 capitalize tracking-tight">{item.name}</p>
+                                        <div className="flex items-baseline gap-1">
+                                            <input
+                                                type="number"
+                                                value={Math.round(item.nutrition.calories)}
+                                                onChange={e => updateItemField(index, 'calories', parseFloat(e.target.value) || 0)}
+                                                className="w-16 text-right font-black text-lg text-gray-900 bg-transparent border-b border-gray-300 focus:border-blue-500 focus:outline-none"
+                                            />
+                                            <span className="text-xs font-medium text-gray-400">kcal</span>
+                                        </div>
                                     </div>
-                                    <div className="text-right whitespace-nowrap">
-                                        <p className="font-black text-gray-900 text-lg tracking-tight">{Math.round(item.nutrition.calories)}<span className="text-xs font-medium text-gray-400 ml-0.5">kcal</span></p>
-                                        <div className="flex gap-2 text-[10px] uppercase tracking-wider font-semibold text-gray-400 mt-1">
-                                            <span className="text-blue-500">{item.nutrition.protein_g}P</span>
-                                            <span className="text-amber-500">{item.nutrition.carbohydrates_total_g}C</span>
-                                            <span className="text-rose-500">{item.nutrition.fat_total_g}F</span>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        <div>
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Serving g</label>
+                                            <input
+                                                type="number"
+                                                value={item.serving_size_g}
+                                                onChange={e => updateItemServing(index, parseFloat(e.target.value) || 1)}
+                                                className="w-full text-sm font-semibold text-gray-700 bg-blue-50 border border-blue-100 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-blue-400 uppercase tracking-wide">Protein</label>
+                                            <input
+                                                type="number"
+                                                value={item.nutrition.protein_g}
+                                                onChange={e => updateItemField(index, 'protein_g', parseFloat(e.target.value) || 0)}
+                                                className="w-full text-sm font-semibold text-gray-700 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-amber-400 uppercase tracking-wide">Carbs</label>
+                                            <input
+                                                type="number"
+                                                value={item.nutrition.carbohydrates_total_g}
+                                                onChange={e => updateItemField(index, 'carbohydrates_total_g', parseFloat(e.target.value) || 0)}
+                                                className="w-full text-sm font-semibold text-gray-700 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-rose-400 uppercase tracking-wide">Fat</label>
+                                            <input
+                                                type="number"
+                                                value={item.nutrition.fat_total_g}
+                                                onChange={e => updateItemField(index, 'fat_total_g', parseFloat(e.target.value) || 0)}
+                                                className="w-full text-sm font-semibold text-gray-700 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -220,9 +315,9 @@ export function SearchContent() {
                                 </div>
                             </div>
 
-                            <button 
+                            <button
                                 onClick={handleSave}
-                                disabled={isSaving || saved}
+                                disabled={isSaving || saved || !editedData}
                                 className={`w-full py-4 text-white font-bold rounded-2xl transition-all shadow-md flex justify-center items-center gap-2 hover:-translate-y-1 hover:shadow-lg ${saved ? 'bg-gradient-to-r from-emerald-500 to-green-600 scale-[0.98]' : 'bg-gradient-to-r from-gray-900 to-gray-800 hover:from-black hover:to-gray-900 active:scale-[0.98]'} disabled:opacity-80`}
                             >
                                 {isSaving ? (

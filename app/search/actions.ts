@@ -4,6 +4,7 @@ import { getNutritionProvider } from "@/lib/nutrition";
 import { ParsedFoodItem } from "@/lib/nutrition/types";
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
+import { revalidatePath } from "next/cache";
 
 export interface AnalyzeMealResponse {
   success: boolean;
@@ -13,9 +14,6 @@ export interface AnalyzeMealResponse {
   source?: string;
 }
 
-// -------------------------------------------------------------
-// Phase 3 Requirement: In-Memory Promise Caching (10 min TTL)
-// -------------------------------------------------------------
 interface CacheEntry {
   data: AnalyzeMealResponse;
   timestamp: number;
@@ -31,19 +29,16 @@ export async function analyzeMeal(query: string): Promise<AnalyzeMealResponse> {
 
     const normalizedQuery = query.toLowerCase().trim();
     
-    // 1. Execute strict 10-minute cache boundary check
     const cachedEntry = searchCache.get(normalizedQuery);
     if (cachedEntry && (Date.now() - cachedEntry.timestamp < CACHE_TTL_MS)) {
       return cachedEntry.data;
     }
 
-    // 2. Fetch fresh data if cache missed
     const provider = getNutritionProvider();
     const items = await provider.parseNaturalLanguage(query);
     const totalCalories = items.reduce((sum, item) => sum + item.nutrition.calories, 0);
-    
-    // Determine the literal data source for auditing
-    const activeSource = process.env.NUTRITION_SOURCE === "API" ? "Live Remote API" 
+
+    const activeSource = process.env.NUTRITION_SOURCE === "API" ? "Live Remote API"
                        : process.env.NUTRITION_SOURCE === "LOCAL" ? "Local SQLite Database"
                        : process.env.NUTRITION_SOURCE === "HYBRID" ? "Hybrid AI Engine"
                        : "Local Mock Provider";
@@ -55,7 +50,6 @@ export async function analyzeMeal(query: string): Promise<AnalyzeMealResponse> {
       source: activeSource
     };
 
-    // 3. Commit isolated payload back to memory cache
     searchCache.set(normalizedQuery, { data: payload, timestamp: Date.now() });
 
     return payload;
@@ -80,7 +74,6 @@ export async function saveMealLog(items: ParsedFoodItem[], type: string, overrid
     const user = await prisma.user.findUnique({ where: { email: session.user.email }});
     if (!user) throw new Error("User record missing in the system.");
 
-    // Persist to SQLite Database securely tied to the exact user
     await prisma.mealLog.create({
       data: {
         userId: user.id,
@@ -88,7 +81,6 @@ export async function saveMealLog(items: ParsedFoodItem[], type: string, overrid
         date: (() => {
             const now = new Date();
             const dateStr = overrideDate ? overrideDate : `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-            
             let timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
             if (overrideTime) {
                 timeStr = `${overrideTime}:00`;
@@ -108,9 +100,19 @@ export async function saveMealLog(items: ParsedFoodItem[], type: string, overrid
       }
     });
 
-    const { updateStreak } = await import("@/lib/streak");
-    await updateStreak(user.id);
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const loggedDateStr = overrideDate || todayStr;
+    const isPastDate = loggedDateStr < todayStr;
 
+    if (isPastDate) {
+      const { recalculateStreakFromHistory } = await import("@/lib/streak");
+      await recalculateStreakFromHistory(user.id);
+    } else {
+      const { updateStreak } = await import("@/lib/streak");
+      await updateStreak(user.id);
+    }
+
+    revalidatePath("/");
     return { success: true };
   } catch (error: unknown) {
     console.error("Error saving meal log:", error);
