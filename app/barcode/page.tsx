@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { saveMealLog } from "@/app/search/actions";
 import { ParsedFoodItem } from "@/lib/nutrition/types";
-import type { BrowserMultiFormatReader } from "@zxing/library";
+import type { BrowserMultiFormatReader as BrowserMultiFormatReaderType } from "@zxing/library";
 
 type OFFProduct = {
     product_name: string;
@@ -28,7 +28,7 @@ function toNowTime() {
 
 export default function BarcodePage() {
     const videoRef = useRef<HTMLVideoElement>(null);
-    const readerRef = useRef<BrowserMultiFormatReader | null>(null);
+    const readerRef = useRef<BrowserMultiFormatReaderType | null>(null);
     const [scanning, setScanning] = useState(false);
     const [scannedCode, setScannedCode] = useState("");
     const [loading, setLoading] = useState(false);
