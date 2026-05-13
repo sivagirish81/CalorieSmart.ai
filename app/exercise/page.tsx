@@ -142,7 +142,7 @@ export default function ExercisePage() {
                 <textarea
                     value={input}
                     onChange={e => setInput(e.target.value)}
-                    placeholder="e.g. 'Did a CrossFit class for 45 mins' or 'walked the dog for an hour'"
+                    placeholder="e.g. 'ran 30 min', 'climbed 3 flights of stairs', '50 push-ups', 'walked 2km'"
                     className="w-full p-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-400 font-medium text-gray-700 min-h-[100px] resize-none"
                     required
                 />

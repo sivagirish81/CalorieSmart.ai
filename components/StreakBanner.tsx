@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import confetti from "canvas-confetti";
 
-export default function StreakBanner({ streak }: { streak: number }) {
+export default function StreakBanner({ streak, freshLogin }: { streak: number; freshLogin: boolean }) {
+    const router = useRouter();
+
     const triggerConfetti = () => {
         const duration = 3 * 1000;
         const end = Date.now() + duration;
@@ -32,18 +35,24 @@ export default function StreakBanner({ streak }: { streak: number }) {
     };
 
     useEffect(() => {
-        if (streak > 0) {
-            const todayStr = new Date().toISOString().split("T")[0];
-            const lastFired = localStorage.getItem("lastConfettiFired");
-            
-            if (lastFired !== todayStr) {
-                triggerConfetti();
-                localStorage.setItem("lastConfettiFired", todayStr);
-            }
-        }
-    }, [streak]);
+        if (streak < 3) return;
 
-    if (streak <= 0) return null;
+        if (freshLogin) {
+            triggerConfetti();
+            localStorage.setItem("lastConfettiFired", new Date().toISOString().split("T")[0]);
+            router.replace("/", { scroll: false });
+            return;
+        }
+
+        const todayStr = new Date().toISOString().split("T")[0];
+        const lastFired = localStorage.getItem("lastConfettiFired");
+        if (lastFired !== todayStr) {
+            triggerConfetti();
+            localStorage.setItem("lastConfettiFired", todayStr);
+        }
+    }, [streak, freshLogin, router]);
+
+    if (streak < 3) return null;
 
     return (
         <div className="bg-amber-100 border border-amber-200 text-amber-900 px-5 py-4 rounded-3xl flex justify-between items-center shadow-sm">
@@ -53,11 +62,11 @@ export default function StreakBanner({ streak }: { streak: number }) {
                 </p>
                 <p className="text-xs font-medium mt-1 opacity-80">You are doing a fantastic job meeting your calorie goals consecutively.</p>
             </div>
-            <button 
-                onClick={triggerConfetti} 
+            <button
+                onClick={triggerConfetti}
                 className="bg-amber-500 hover:bg-amber-600 active:scale-95 transition-all text-white px-3 py-2 rounded-xl text-xs font-bold shadow-sm whitespace-nowrap"
             >
-                🎊 Replay 
+                🎊 Replay
             </button>
         </div>
     );

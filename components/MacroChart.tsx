@@ -4,9 +4,9 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 export default function MacroChart({ protein, carbs, fat }: { protein: number, carbs: number, fat: number }) {
     const data = [
-      { name: 'Protein', value: Math.round(protein), color: '#ef4444' }, // Red
-      { name: 'Carbs', value: Math.round(carbs), color: '#3b82f6' }, // Blue
-      { name: 'Fat', value: Math.round(fat), color: '#eab308' }, // Yellow
+      { name: 'Protein', value: Math.round(protein), color: '#ef4444' },
+      { name: 'Carbs', value: Math.round(carbs), color: '#3b82f6' },
+      { name: 'Fat', value: Math.round(fat), color: '#eab308' },
     ].filter(i => i.value > 0);
 
     if (data.length === 0) {
